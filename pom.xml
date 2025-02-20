@@ -4,11 +4,11 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.draaisa</groupId>
-  <artifactId>draaisa</artifactId>
+  <groupId>com.vluevano</groupId>
+  <artifactId>pricestocker</artifactId>
   <version>1</version>
 
-  <name>draaisa</name>
+  <name>pricestocker</name>
   <!-- FIXME change it to the project's website -->
   <url>http://www.example.com</url>
 
@@ -125,7 +125,7 @@
           </execution>
         </executions>
         <configuration>
-          <mainClass>com.draaisa.Main</mainClass>
+          <mainClass>com.vluevano.Main</mainClass>
         </configuration>
       </plugin>
 
