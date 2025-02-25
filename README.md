@@ -1,6 +1,6 @@
-# Sistema Draaisa
+# PriceStocker
 
-El Sistema Draaisa está diseñado para optimizar la gestión de inventarios, permitiendo a la empresa Draaisa controlar y consultar sus productos y sus respectivos proveedores, clientes, fabricantes, prestadores de servicios y empresas del mercado. Se ofrece una plataforma integral que facilita el registro de datos y permite un análisis profundo de los precios de compra, venta y mercado, con seguimiento de variaciones, además de generar reportes detallados para la toma de decisiones estratégicas.
+PriceStocker está diseñado para optimizar la gestión de inventarios, permitiendo controlar y consultar sus productos y sus respectivos proveedores, clientes, fabricantes, prestadores de servicios y empresas del mercado. Se ofrece una plataforma integral que facilita el registro de datos y permite un análisis profundo de los precios de compra, venta y mercado, con seguimiento de variaciones, además de generar reportes detallados para la toma de decisiones estratégicas.
 
 ## Requerimientos Funcionales
 
