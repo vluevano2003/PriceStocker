@@ -1,4 +1,4 @@
-package com.vluevano.view;
+/*package com.vluevano.view;
 
 import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
@@ -589,3 +589,4 @@ public class ProductoView extends Application {
         menuPrincipalScreen.mostrarMenu();
     }
 }
+*/

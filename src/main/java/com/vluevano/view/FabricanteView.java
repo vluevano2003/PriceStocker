@@ -1,4 +1,4 @@
-package com.vluevano.view;
+/*package com.vluevano.view;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -630,3 +630,4 @@ public class FabricanteView extends Application {
     }
 
 }
+*/

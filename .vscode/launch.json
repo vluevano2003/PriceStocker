@@ -6,6 +6,27 @@
     "configurations": [
         {
             "type": "java",
+            "name": "PriceStockerApplication",
+            "request": "launch",
+            "mainClass": "com.vluevano.PriceStockerApplication",
+            "projectName": "pricestocker"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.vluevano.Main",
+            "projectName": "pricestocker"
+        },
+        {
+            "type": "java",
+            "name": "LoginScreen",
+            "request": "launch",
+            "mainClass": "com.vluevano.view.LoginScreen",
+            "projectName": "pricestocker"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"
