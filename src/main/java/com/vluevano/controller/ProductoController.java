@@ -1,4 +1,4 @@
-package com.vluevano.controller;
+/*package com.vluevano.controller;
 
 import javafx.scene.control.Alert;
 
@@ -1067,3 +1067,4 @@ public class ProductoController {
     }
 
 }
+*/

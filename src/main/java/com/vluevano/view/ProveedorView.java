@@ -1,632 +1,698 @@
-/*package com.vluevano.view;
+package com.vluevano.view;
 
-import javafx.application.Application;
+import com.vluevano.model.Proveedor;
+import com.vluevano.service.ProveedorService;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.stage.FileChooser;
+import javafx.scene.paint.Color;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+@Component
+public class ProveedorView {
 
-import com.vluevano.controller.ProveedorController;
-import com.vluevano.database.DatabaseConnection;
-import com.vluevano.model.Categoria;
-import com.vluevano.model.Proveedor;
+    @Autowired
+    private ProveedorService proveedorService;
 
-public class ProveedorView extends Application {
+    @Autowired
+    @Lazy
+    private MenuPrincipalScreen menuPrincipalScreen;
 
-    private ProveedorController controller = new ProveedorController();
-
+    private Stage stage;
     private String usuarioActual;
 
-    private TableView<Proveedor> tableView;
-
-    public ProveedorView(String usuarioActual) {
-        this.usuarioActual = usuarioActual; // Guardamos el usuario actual
-    }
-
-    public static void main(String[] args) {
-        launch(args);
-    }
-
-    @Override
-    public void start(Stage primaryStage) {
-        primaryStage.setTitle("Módulo de Proveedores");
-
-        // Crear menú
-        MenuBar menuBar = new MenuBar();
-
-        Menu menu = new Menu("Opciones");
-        MenuItem registroItem = new MenuItem("Registrar Proveedor");
-        MenuItem consultarItem = new MenuItem("Consultar Proveedores");
-        MenuItem salirItem = new MenuItem("Salir");
-
-        menu.getItems().addAll(registroItem, consultarItem, salirItem);
-        menuBar.getMenus().add(menu);
-
-        // Crear panel principal
-        VBox vbox = new VBox();
-        vbox.setSpacing(10);
-        vbox.setPadding(new Insets(20));
-
-        // Funcionalidades del menú
-        registroItem.setOnAction(e -> {
-            try {
-                showRegistroForm(vbox);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-        consultarItem.setOnAction(e -> showConsultarForm(vbox));
-        salirItem.setOnAction(e -> mostrarMenuPrincipal(primaryStage));
-
-        // Layout principal
-        BorderPane root = new BorderPane();
-        root.setTop(menuBar);
-        root.setCenter(vbox);
-
-        showConsultarForm(vbox);
-
-        Scene scene = new Scene(root, 900, 600);
-        primaryStage.setScene(scene);
-        primaryStage.show();
-    }
-
-    // Registrar proveedores
-    private void showRegistroForm(VBox vbox) throws IOException {
-        vbox.getChildren().clear();
-
-        // Asegurarse de que la ventana es lo suficientemente grande
-        Stage stage = (Stage) vbox.getScene().getWindow();
-        stage.setWidth(600);
-        stage.setHeight(700);
-
-        // Título del apartado
-        Label titleLabel = new Label("Registrar Proveedor");
-        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-padding: 10px;");
-
-        // Crear campos de texto con Labels
-        Label nombreLabel = new Label("Nombre del proveedor:");
-        TextField nombreField = new TextField();
-
-        Label rfcLabel = new Label("RFC:");
-        TextField rfcField = new TextField();
-
-        Label telefonoLabel = new Label("Teléfono:");
-        TextField telefonoField = new TextField();
-
-        Label cpLabel = new Label("Código Postal:");
-        TextField cpField = new TextField();
-
-        Label noExtLabel = new Label("Número exterior:");
-        TextField noExtField = new TextField();
-
-        Label noIntLabel = new Label("Número interior:");
-        TextField noIntField = new TextField();
-
-        Label calleLabel = new Label("Calle:");
-        TextField calleField = new TextField();
-
-        Label coloniaLabel = new Label("Colonia:");
-        TextField coloniaField = new TextField();
-
-        Label ciudadLabel = new Label("Ciudad:");
-        TextField ciudadField = new TextField();
-
-        Label municipioLabel = new Label("Municipio:");
-        TextField municipioField = new TextField();
-
-        Label estadoLabel = new Label("Estado:");
-        TextField estadoField = new TextField();
-
-        Label paisLabel = new Label("País:");
-        TextField paisField = new TextField();
-
-        Label correoLabel = new Label("Correo electrónico:");
-        TextField correoField = new TextField();
-
-        Label curpLabel = new Label("CURP:");
-        TextField curpField = new TextField();
-
-        CheckBox personaFisicaCheck = new CheckBox("Es persona física");
-
-        // Crear contenedor para las categorías
-        HBox categoriaContainer = new HBox(10);
-
-        // Crear un ComboBox inicial para la categoría
-        ComboBox<String> categoriaComboBox = new ComboBox<>();
-        cargarCategorias(categoriaComboBox); // Cargar categorías desde la base de datos
-        categoriaComboBox.setPromptText("Selecciona categoría");
-
-        // Añadir el ComboBox al contenedor
-        categoriaContainer.getChildren().add(categoriaComboBox);
-
-        // Crear botón para agregar más ComboBoxes
-        Button agregarCategoriaButton = new Button("Agregar otra categoría");
-        agregarCategoriaButton.setOnAction(e -> {
-            ComboBox<String> nuevaCategoriaComboBox = new ComboBox<>();
-            try {
-                cargarCategorias(nuevaCategoriaComboBox);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            } // Cargar categorías desde la base de datos
-            nuevaCategoriaComboBox.setPromptText("Selecciona categoría");
-            categoriaContainer.getChildren().add(nuevaCategoriaComboBox);
-        });
-
-        // Crear botón para registrar nueva categoría
-        Button nuevaCategoriaButton = new Button("Registrar Nueva Categoría");
-        nuevaCategoriaButton.setOnAction(e -> showRegistrarCategoriaForm(vbox, categoriaComboBox));
-
-        // Contenedor para los botones de categoría (ahora alineados horizontalmente)
-        HBox categoriaBotonesContainer = new HBox(10);
-        categoriaBotonesContainer.getChildren().addAll(agregarCategoriaButton, nuevaCategoriaButton);
-
-        // Botón para cargar archivo Excel
-        Button cargarExcelButton = new Button("Cargar archivo Excel");
-        cargarExcelButton.setOnAction(e -> cargarProveedoresDesdeExcel());
-
-        // Crear botón para registrar
-        Button registrarButton = new Button("Registrar");
-        registrarButton.setOnAction(e -> {
-            String nombre = nombreField.getText().trim();
-            String rfc = rfcField.getText().trim();
-            String telefono = telefonoField.getText().trim();
-            String cp = cpField.getText().trim();
-            String noExt = noExtField.getText().trim();
-            String noInt = noIntField.getText().trim();
-            String calle = calleField.getText().trim();
-            String colonia = coloniaField.getText().trim();
-            String ciudad = ciudadField.getText().trim();
-            String municipio = municipioField.getText().trim();
-            String estado = estadoField.getText().trim();
-            String pais = paisField.getText().trim();
-            String correo = correoField.getText().trim();
-            String curp = curpField.getText().trim();
-            boolean esPersonaFisica = personaFisicaCheck.isSelected();
-
-            // Obtener todas las categorías seleccionadas
-            List<String> categoriasSeleccionadas = new ArrayList<>();
-            for (Node node : categoriaContainer.getChildren()) {
-                if (node instanceof ComboBox) {
-                    @SuppressWarnings("unchecked")
-                    String categoria = ((ComboBox<String>) node).getValue();
-                    if (categoria != null) {
-                        categoriasSeleccionadas.add(categoria);
-                    }
-                }
-            }
-
-            if (!validarCampos(nombreField, rfcField, telefonoField, cpField, correoField, curpField)) {
-                return;
-            }
-
-            // Registrar proveedor
-            int cpInt = Integer.parseInt(cp);
-            int noExtInt = Integer.parseInt(noExt);
-            int noIntInt = noInt.isEmpty() ? 0 : Integer.parseInt(noInt);
-
-            Proveedor proveedor = new Proveedor(0, nombre, cpInt, noExtInt, noIntInt, rfc, municipio, estado, calle,
-                    colonia, ciudad, pais, telefono, correo, curp, esPersonaFisica);
-            List<Categoria> categorias = new ArrayList<>();
-
-            // Agregar las categorías seleccionadas
-            for (String categoriaSeleccionada : categoriasSeleccionadas) {
-                categorias.add(new Categoria(0, categoriaSeleccionada, "Descripción"));
-            }
-
-            controller.registrarProveedor(proveedor, categorias);
-            showAlert(Alert.AlertType.INFORMATION, "Proveedor registrado con éxito.");
-        });
-
-        ScrollPane scrollPane = new ScrollPane();
-        VBox formContainer = new VBox(10);
-        formContainer.getChildren().addAll(
-                titleLabel, nombreLabel, nombreField, rfcLabel, rfcField, telefonoLabel, telefonoField, cpLabel,
-                cpField,
-                noExtLabel, noExtField, noIntLabel, noIntField, calleLabel, calleField, coloniaLabel, coloniaField,
-                ciudadLabel, ciudadField, municipioLabel, municipioField, estadoLabel, estadoField, paisLabel,
-                paisField,
-                correoLabel, correoField, curpLabel, curpField, personaFisicaCheck, categoriaContainer,
-                categoriaBotonesContainer, registrarButton, cargarExcelButton);
-
-        scrollPane.setContent(formContainer);
-        scrollPane.setFitToHeight(true); // Ajusta la altura al contenido
-        scrollPane.setFitToWidth(true); // Ajusta el ancho al contenido
-
-        // Agregar el contenedor con scroll al VBox
-        vbox.getChildren().add(scrollPane);
-    }
-
-    // Método para cargar las categorías desde la base de datos
-    private void cargarCategorias(ComboBox<String> categoriaComboBox) throws IOException {
-        categoriaComboBox.getItems().clear(); // Limpiar los items antes de agregar nuevos
-
-        String sql = "SELECT nombreCategoria FROM categoria"; // Consulta para obtener categorías
-
-        try (Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql);
-                ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                categoriaComboBox.getItems().add(rs.getString("nombreCategoria"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error al cargar categorías.");
-        }
-    }
-
-    // Método para mostrar alerta
-    private void showAlert(Alert.AlertType alertType, String message) {
-        Alert alert = new Alert(alertType, message);
-        alert.show();
-    }
-
-    // Método para mostrar formulario de nueva categoría
-    private void showRegistrarCategoriaForm(VBox vbox, ComboBox<String> categoriaComboBox) {
-        Stage newStage = new Stage();
-        newStage.setTitle("Registrar Nueva Categoría");
-
-        // Crear campo de texto para el nombre de la categoría
-        TextField categoriaField = new TextField();
-        categoriaField.setPromptText("Nombre de la categoría");
-
-        // Crear campo de texto para la descripción de la categoría
-        TextField descripcionField = new TextField();
-        descripcionField.setPromptText("Descripción de la categoría");
-
-        // Crear botón para registrar la categoría
-        Button registrarCategoriaButton = new Button("Registrar");
-        registrarCategoriaButton.setOnAction(e -> {
-            String categoria = categoriaField.getText().trim();
-            String descripcion = descripcionField.getText().trim();
-
-            // Validar que el nombre y la descripción no estén vacíos
-            if (categoria.isEmpty() || descripcion.isEmpty()) {
-                showAlert(Alert.AlertType.ERROR, "Nombre y descripción de la categoría son obligatorios.");
-                return;
-            }
-
-            // Lógica para registrar la nueva categoría en la base de datos
-            String sql = "INSERT INTO categoria (nombrecategoria, desccategoria) VALUES (?, ?)";
-            try (Connection conn = DatabaseConnection.getConnection();
-                    PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-                stmt.setString(1, categoria);
-                stmt.setString(2, descripcion);
-                stmt.executeUpdate();
-
-                // Actualizar el ComboBox con la nueva categoría
-                cargarCategorias(categoriaComboBox);
-
-                showAlert(Alert.AlertType.INFORMATION, "Categoría registrada con éxito.");
-                newStage.close();
-
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                showAlert(Alert.AlertType.ERROR, "Error al registrar la categoría.");
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        // Contenedor para los campos y el botón
-        VBox newFormContainer = new VBox(10);
-        newFormContainer.setPadding(new Insets(20)); // Añadir margen entre los elementos y los bordes
-        newFormContainer.getChildren().addAll(
-                new Label("Registrar Nueva Categoría"),
-                categoriaField,
-                descripcionField,
-                registrarCategoriaButton);
-
-        // Crear la escena con el contenedor y mostrar la ventana
-        Scene newScene = new Scene(newFormContainer, 300, 200);
-        newStage.setScene(newScene);
-        newStage.show();
-    }
-
-    // Consultar proveedores
-    @SuppressWarnings("unchecked")
-    private void showConsultarForm(VBox vbox) {
-        vbox.getChildren().clear();
-
-        if (vbox.getScene() != null) {
-            Stage stage = (Stage) vbox.getScene().getWindow();
-            stage.setWidth(900);
-            stage.setHeight(600);
+    private TableView<Proveedor> tablaProveedores;
+    private TextField txtFiltro;
+
+    private TextField txtNombre, txtRfc, txtTelefono, txtCorreo;
+    private TextField txtCp, txtNoExt, txtNoInt, txtCalle, txtColonia, txtCiudad, txtMunicipio, txtEstado, txtPais;
+    private TextField txtCurp;
+    private ComboBox<String> cmbTipoPersona;
+    private Label lblMensaje;
+
+    private static final String COLOR_PRIMARY = "#F97316";
+    private static final String COLOR_PRIMARY_HOVER = "#EA580C";
+    private static final String COLOR_BG_LIGHT = "#F3F4F6";
+    private static final String STYLE_INPUT = "-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-font-size: 14px;";
+    private static final String STYLE_LABEL_INPUT = "-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;";
+    private static final String STYLE_CARD = "-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 4);";
+    private static final String STYLE_DIALOG_BG = "-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-border-width: 1; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 4);";
+
+    /**
+     * Muestra la pantalla de gestión de proveedores
+     * 
+     * @param stage
+     * @param usuarioActual
+     */
+    public void show(Stage stage, String usuarioActual) {
+        this.stage = stage;
+        this.usuarioActual = usuarioActual;
+
+        BorderPane root = crearContenido();
+
+        if (stage.getScene() != null) {
+            stage.getScene().setRoot(root);
         } else {
-            System.err.println("El VBox aún no está en la escena.");
+            Scene scene = new Scene(root, 1280, 800);
+            stage.setScene(scene);
+            stage.centerOnScreen();
         }
+        stage.setResizable(true);
+        stage.setTitle("PriceStocker | Gestión de Proveedores");
+        stage.show();
 
-        // Crear campo de búsqueda
-        TextField filtroField = new TextField();
-        filtroField.setPromptText("Introduce palabras clave para filtrar");
+        cargarProveedores();
+    }
 
-        // Crear el TableView
-        tableView = new TableView<>();
+    /**
+     * Crea el contenido principal de la vista
+     * 
+     * @return
+     */
+    private BorderPane crearContenido() {
+        BorderPane root = new BorderPane();
+        root.setStyle("-fx-background-color: " + COLOR_BG_LIGHT + ";");
 
-        // Crear columnas para cada atributo del proveedor
-        TableColumn<Proveedor, Integer> idColumn = new TableColumn<>("ID");
-        idColumn.setCellValueFactory(new PropertyValueFactory<>("idProveedor"));
+        // HEADER
+        HBox header = new HBox(20);
+        header.setPadding(new Insets(20, 40, 20, 40));
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setStyle(
+                "-fx-background-color: #111827; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);");
 
-        TableColumn<Proveedor, String> nombreColumn = new TableColumn<>("Nombre");
-        nombreColumn.setCellValueFactory(new PropertyValueFactory<>("nombreProv"));
+        Label lblTitulo = new Label("Gestión de Proveedores");
+        lblTitulo.setStyle(
+                "-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: white;");
 
-        TableColumn<Proveedor, String> rfcColumn = new TableColumn<>("RFC");
-        rfcColumn.setCellValueFactory(new PropertyValueFactory<>("rfcProveedor"));
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        TableColumn<Proveedor, String> telefonoColumn = new TableColumn<>("Teléfono");
-        telefonoColumn.setCellValueFactory(new PropertyValueFactory<>("telefonoProv"));
+        Button btnVolver = new Button("Volver al Menú");
+        crearBotonSecundario(btnVolver);
+        btnVolver.setOnAction(e -> menuPrincipalScreen.show(stage, this.usuarioActual));
 
-        TableColumn<Proveedor, Integer> cpColumn = new TableColumn<>("Código Postal");
-        cpColumn.setCellValueFactory(new PropertyValueFactory<>("cpProveedor"));
+        header.getChildren().addAll(lblTitulo, spacer, btnVolver);
+        root.setTop(header);
 
-        TableColumn<Proveedor, Integer> noExtColumn = new TableColumn<>("Número Exterior");
-        noExtColumn.setCellValueFactory(new PropertyValueFactory<>("noExtProv"));
+        // CONTENIDO CENTRAL
+        HBox contenidoCentral = new HBox(30);
+        contenidoCentral.setPadding(new Insets(30));
 
-        TableColumn<Proveedor, Integer> noIntColumn = new TableColumn<>("Número Interior");
-        noIntColumn.setCellValueFactory(new PropertyValueFactory<>("noIntProv"));
+        VBox panelTabla = crearPanelTabla();
+        HBox.setHgrow(panelTabla, Priority.ALWAYS);
 
-        TableColumn<Proveedor, String> calleColumn = new TableColumn<>("Calle");
-        calleColumn.setCellValueFactory(new PropertyValueFactory<>("calle"));
+        VBox panelFormulario = crearPanelFormulario();
+        panelFormulario.setMinWidth(420);
+        panelFormulario.setMaxWidth(420);
 
-        TableColumn<Proveedor, String> coloniaColumn = new TableColumn<>("Colonia");
-        coloniaColumn.setCellValueFactory(new PropertyValueFactory<>("colonia"));
+        contenidoCentral.getChildren().addAll(panelTabla, panelFormulario);
+        root.setCenter(contenidoCentral);
 
-        TableColumn<Proveedor, String> ciudadColumn = new TableColumn<>("Ciudad");
-        ciudadColumn.setCellValueFactory(new PropertyValueFactory<>("ciudad"));
+        return root;
+    }
 
-        TableColumn<Proveedor, String> municipioColumn = new TableColumn<>("Municipio");
-        municipioColumn.setCellValueFactory(new PropertyValueFactory<>("municipio"));
+    /**
+     * Crea el panel con la tabla de proveedores y barra de búsqueda
+     * 
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    private VBox crearPanelTabla() {
+        VBox box = new VBox(15);
 
-        TableColumn<Proveedor, String> estadoColumn = new TableColumn<>("Estado");
-        estadoColumn.setCellValueFactory(new PropertyValueFactory<>("estado"));
+        // Barra de búsqueda
+        HBox topBar = new HBox(10);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        Label lblBuscar = new Label("Buscar:");
+        lblBuscar.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
 
-        TableColumn<Proveedor, String> paisColumn = new TableColumn<>("País");
-        paisColumn.setCellValueFactory(new PropertyValueFactory<>("pais"));
-
-        TableColumn<Proveedor, String> correoColumn = new TableColumn<>("Correo");
-        correoColumn.setCellValueFactory(new PropertyValueFactory<>("correoProv"));
-
-        TableColumn<Proveedor, String> curpColumn = new TableColumn<>("CURP");
-        curpColumn.setCellValueFactory(new PropertyValueFactory<>("curp"));
-
-        TableColumn<Proveedor, String> personaFisicaColumn = new TableColumn<>("Es Persona Física");
-        personaFisicaColumn.setCellValueFactory(new PropertyValueFactory<>("esPersonaFisica"));
-
-        TableColumn<Proveedor, String> categoriasColumn = new TableColumn<>("Categorías");
-        categoriasColumn.setCellValueFactory(new PropertyValueFactory<>("categoriasAsString"));
-        categoriasColumn.setResizable(true);
-        categoriasColumn.setPrefWidth(350);
-
-        // Agregar las columnas al TableView
-        tableView.getColumns().addAll(idColumn, nombreColumn, rfcColumn, telefonoColumn, cpColumn, noExtColumn,
-                noIntColumn, calleColumn, coloniaColumn, ciudadColumn, municipioColumn, estadoColumn, paisColumn,
-                correoColumn, curpColumn, personaFisicaColumn, categoriasColumn);
-
-        List<Proveedor> proveedoresIniciales = controller.consultarTodosProveedores();
-
-        tableView.getItems().setAll(proveedoresIniciales);
-
-        // Crear un filtro para la búsqueda
-        filtroField.textProperty().addListener((observable, oldValue, newValue) -> {
-            // Buscar proveedores con los filtros proporcionados
-            List<Proveedor> proveedoresFiltrados = controller.buscarProveedores(newValue);
-
-            // Actualizar la tabla con los proveedores filtrados
-            tableView.getItems().setAll(proveedoresFiltrados);
+        txtFiltro = new TextField();
+        txtFiltro.setPromptText("Nombre, RFC, Municipio...");
+        txtFiltro.setStyle(STYLE_INPUT);
+        txtFiltro.setPrefWidth(300);
+        txtFiltro.textProperty().addListener((obs, oldVal, newVal) -> {
+            tablaProveedores.getItems().setAll(proveedorService.buscarProveedores(newVal));
         });
 
-        tableView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                mostrarVentanaEdicionProveedor(newValue);
+        topBar.getChildren().addAll(lblBuscar, txtFiltro);
+
+        // Tabla
+        tablaProveedores = new TableView<>();
+        tablaProveedores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tablaProveedores.setStyle(
+                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        // ID
+        TableColumn<Proveedor, String> colId = new TableColumn<>("ID");
+        colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdProveedor())));
+        colId.setResizable(false);
+
+        // Proveedor
+        TableColumn<Proveedor, String> colNombre = new TableColumn<>("Proveedor");
+        colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getNombreProv()));
+        colNombre.setResizable(false);
+
+        // Teléfono
+        TableColumn<Proveedor, String> colTel = new TableColumn<>("Teléfono");
+        colTel.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTelefonoProv()));
+        colTel.setResizable(false);
+
+        // Correo
+        TableColumn<Proveedor, String> colCorreo = new TableColumn<>("Correo");
+        colCorreo.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCorreoProv()));
+        colCorreo.setResizable(false);
+
+        // Dirección
+        TableColumn<Proveedor, String> colDireccion = new TableColumn<>("Dirección Completa");
+        colDireccion.setCellValueFactory(data -> {
+            Proveedor p = data.getValue();
+            String dir = String.format("%s #%d, %s, CP %d, %s, %s, %s",
+                    p.getCalle(), p.getNoExtProv(), p.getColonia(), p.getCpProveedor(),
+                    p.getCiudad(), p.getEstado(), p.getPais());
+            return new SimpleStringProperty(dir);
+        });
+        colDireccion.setResizable(false);
+
+        // Acciones
+        TableColumn<Proveedor, Void> colAcciones = new TableColumn<>("Acciones");
+        colAcciones.setResizable(false);
+
+        colAcciones.setCellFactory(param -> new TableCell<>() {
+            private final Button btnEliminar = new Button("Eliminar");
+            {
+                btnEliminar.setStyle(
+                        "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-background-radius: 4; -fx-cursor: hand; -fx-font-size: 11px;");
+                btnEliminar.setOnAction(e -> eliminarProveedor(getTableView().getItems().get(getIndex())));
+                setAlignment(Pos.CENTER);
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btnEliminar);
             }
         });
 
-        // Crear un ScrollPane para que la tabla sea desplazable si es necesario
-        ScrollPane scrollPane = new ScrollPane(tableView);
-        scrollPane.setFitToHeight(true);
+        // DISTRIBUCIÓN DE LAS COLUMNAS
+        colId.prefWidthProperty().bind(tablaProveedores.widthProperty().multiply(0.05));
+        colNombre.prefWidthProperty().bind(tablaProveedores.widthProperty().multiply(0.20));
+        colTel.prefWidthProperty().bind(tablaProveedores.widthProperty().multiply(0.10));
+        colCorreo.prefWidthProperty().bind(tablaProveedores.widthProperty().multiply(0.15));
+        colDireccion.prefWidthProperty().bind(tablaProveedores.widthProperty().multiply(0.40));
+        colAcciones.prefWidthProperty().bind(tablaProveedores.widthProperty().multiply(0.10));
+
+        tablaProveedores.getColumns().addAll(colId, colNombre, colTel, colCorreo, colDireccion, colAcciones);
+        VBox.setVgrow(tablaProveedores, Priority.ALWAYS);
+        tablaProveedores.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null)
+                mostrarDetalleProveedor(newSelection);
+        });
+        box.getChildren().addAll(topBar, tablaProveedores);
+        return box;
+    }
+
+    /**
+     * Crea el panel con el formulario
+     * 
+     * @return
+     */
+    private VBox crearPanelFormulario() {
+        VBox card = new VBox(0);
+        card.setStyle(STYLE_CARD);
+
+        Label lblTitle = new Label("Nuevo Proveedor");
+        lblTitle.setStyle(
+                "-fx-font-family: 'Segoe UI'; -fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #111827;");
+        lblTitle.setPadding(new Insets(20));
+
+        VBox inputsContainer = new VBox(10);
+        inputsContainer.setPadding(new Insets(0, 20, 20, 20));
+
+        // Campos de entrada
+        txtNombre = crearCampoTexto("Ej. Juan Pérez / Distribuidora del Norte");
+        txtTelefono = crearCampoTexto("Ej. 55 1234 5678");
+        txtCorreo = crearCampoTexto("contacto@empresa.com");
+
+        txtCalle = crearCampoTexto("Ej. Av. Reforma");
+        txtNoExt = crearCampoTexto("Ej. 123");
+        txtNoInt = crearCampoTexto("Ej. Piso 2 (Opcional)");
+        txtCp = crearCampoTexto("Ej. 06600");
+        txtColonia = crearCampoTexto("Ej. Juárez");
+        txtCiudad = crearCampoTexto("Ej. Ciudad de México");
+        txtMunicipio = crearCampoTexto("Ej. Cuauhtémoc");
+        txtEstado = crearCampoTexto("Ej. CDMX");
+        txtPais = crearCampoTexto("Ej. México");
+
+        txtRfc = crearCampoTexto("Ej. XAXX010101000 (Opcional)");
+        txtCurp = crearCampoTexto("Ej. AAAA999999HDFXXX00 (Opcional)");
+
+        cmbTipoPersona = new ComboBox<>();
+        cmbTipoPersona.getItems().addAll("Persona Moral", "Persona Física");
+        cmbTipoPersona.getSelectionModel().select(0);
+        cmbTipoPersona.setMaxWidth(Double.MAX_VALUE);
+        cmbTipoPersona.setStyle(STYLE_INPUT);
+
+        // Estructura
+        inputsContainer.getChildren().addAll(
+                crearSeccion("Datos Personales"), // Color Naranja
+                crearInputConLabel("Nombre / Razón Social *", txtNombre),
+                crearInputConLabel("Teléfono *", txtTelefono),
+                crearInputConLabel("Correo Electrónico *", txtCorreo),
+
+                crearSeccion("Dirección"), // Color Naranja
+                crearInputConLabel("Calle *", txtCalle),
+                new HBox(10,
+                        crearInputConLabel("No. Ext *", txtNoExt),
+                        crearInputConLabel("No. Int", txtNoInt),
+                        crearInputConLabel("C.P. *", txtCp)),
+                crearInputConLabel("Colonia *", txtColonia),
+                crearInputConLabel("Ciudad *", txtCiudad),
+                crearInputConLabel("Municipio *", txtMunicipio),
+                new HBox(10,
+                        crearInputConLabel("Estado *", txtEstado),
+                        crearInputConLabel("País *", txtPais)),
+
+                crearSeccion("Datos Fiscales"), // Color Naranja
+                crearInputConLabel("Tipo de Persona", cmbTipoPersona),
+                crearInputConLabel("RFC", txtRfc),
+                crearInputConLabel("CURP", txtCurp));
+
+        ScrollPane scrollPane = new ScrollPane(inputsContainer);
         scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-        // Agregar el ScrollPane con la tabla al VBox
-        vbox.getChildren().addAll(filtroField, scrollPane);
+        VBox footer = new VBox(10);
+        footer.setPadding(new Insets(20));
+
+        Button btnGuardar = new Button("Registrar Proveedor");
+        crearBotonPrimario(btnGuardar);
+        btnGuardar.setMaxWidth(Double.MAX_VALUE);
+        btnGuardar.setOnAction(e -> registrarProveedor());
+
+        Button btnLimpiar = new Button("Limpiar Formulario");
+        crearBotonTexto(btnLimpiar);
+        btnLimpiar.setMaxWidth(Double.MAX_VALUE);
+        btnLimpiar.setOnAction(e -> limpiarFormulario());
+
+        lblMensaje = new Label();
+        lblMensaje.setWrapText(true);
+
+        footer.getChildren().addAll(btnGuardar, btnLimpiar, lblMensaje);
+        card.getChildren().addAll(lblTitle, scrollPane, footer);
+        return card;
     }
 
-    private void mostrarMenuPrincipal(Stage primaryStage) {
-        // Crea una nueva instancia del MenuPrincipalScreen con el usuario actual
-        MenuPrincipalScreen menuPrincipalScreen = new MenuPrincipalScreen(primaryStage, usuarioActual);
-        menuPrincipalScreen.mostrarMenu(); // Mostrar el menú principal
+    /**
+     * Crea un VBox con un Label y un campo de entrada
+     * 
+     * @param textoLabel
+     * @param campo
+     * @return
+     */
+    private VBox crearInputConLabel(String textoLabel, Node campo) {
+        Label l = new Label(textoLabel);
+        l.setStyle(STYLE_LABEL_INPUT);
+        if (textoLabel.contains("*"))
+            l.setTextFill(Color.web(COLOR_PRIMARY));
+        VBox v = new VBox(5, l, campo);
+        HBox.setHgrow(v, Priority.ALWAYS);
+        return v;
     }
 
-    public void mostrarVentanaEdicionProveedor(Proveedor proveedorSeleccionado) {
-        // Crear los campos de texto para editar
-        TextField nombreField = new TextField(proveedorSeleccionado.getNombreProv());
-        TextField rfcField = new TextField(proveedorSeleccionado.getRfcProveedor());
-        TextField telefonoField = new TextField(proveedorSeleccionado.getTelefonoProv());
-        TextField cpField = new TextField(String.valueOf(proveedorSeleccionado.getCpProveedor()));
-        TextField noExtField = new TextField(String.valueOf(proveedorSeleccionado.getNoExtProv()));
-        TextField noIntField = new TextField(String.valueOf(proveedorSeleccionado.getNoIntProv()));
-        TextField calleField = new TextField(proveedorSeleccionado.getCalle());
-        TextField coloniaField = new TextField(proveedorSeleccionado.getColonia());
-        TextField ciudadField = new TextField(proveedorSeleccionado.getCiudad());
-        TextField municipioField = new TextField(proveedorSeleccionado.getMunicipio());
-        TextField estadoField = new TextField(proveedorSeleccionado.getEstado());
-        TextField paisField = new TextField(proveedorSeleccionado.getPais());
-        TextField correoField = new TextField(proveedorSeleccionado.getCorreoProv());
-        TextField curpField = new TextField(proveedorSeleccionado.getCurp());
-        CheckBox personaFisicaCheck = new CheckBox();
-        personaFisicaCheck.setSelected(proveedorSeleccionado.isEsPersonaFisica());
-
-        // Crear botones de acción
-        Button guardarButton = new Button("Guardar cambios");
-        Button eliminarButton = new Button("Eliminar proveedor");
-
-        // Evento para guardar cambios
-        guardarButton.setOnAction(e -> {
-
-            if (!validarCampos(nombreField, rfcField, telefonoField, cpField, correoField, curpField)) {
-                return;
-            }
-
-            // Crear un nuevo proveedor con los datos editados
-            Proveedor proveedorEditado = new Proveedor(
-                    proveedorSeleccionado.getIdProveedor(), // ID no cambia
-                    nombreField.getText(),
-                    Integer.parseInt(cpField.getText()),
-                    Integer.parseInt(noExtField.getText()),
-                    Integer.parseInt(noIntField.getText()),
-                    rfcField.getText(),
-                    municipioField.getText(),
-                    estadoField.getText(),
-                    calleField.getText(),
-                    coloniaField.getText(),
-                    ciudadField.getText(),
-                    paisField.getText(),
-                    telefonoField.getText(),
-                    correoField.getText(),
-                    curpField.getText(),
-                    personaFisicaCheck.isSelected());
-
-            // Llamar al método del controlador para actualizar el proveedor
-            controller.modificarProveedor(proveedorEditado);
-
-            actualizarTablaProveedores(tableView);
-            // Cerrar la ventana
-            ((Stage) guardarButton.getScene().getWindow()).close();
-        });
-
-        // Evento para eliminar proveedor
-        eliminarButton.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmar eliminación");
-            alert.setHeaderText("¿Estás seguro de eliminar este proveedor?");
-            alert.setContentText("Esta acción no se puede deshacer.");
-            alert.showAndWait().ifPresent(response -> {
-                if (response == ButtonType.OK) {
-                    // Eliminar proveedor en la base de datos
-                    try {
-                        controller.eliminarProveedor(proveedorSeleccionado.getIdProveedor());
-                    } catch (SQLException | IOException e1) {
-                        e1.printStackTrace();
-                    }
-
-                    // Actualizar la tabla
-                    actualizarTablaProveedores(tableView);
-
-                    // Cerrar la ventana
-                    ((Stage) eliminarButton.getScene().getWindow()).close();
-                }
-            });
-        });
-
-        // Crear un VBox para organizar los campos y botones
-        VBox vboxFormulario = new VBox(10);
-        vboxFormulario.setPadding(new Insets(10)); // Añadir espaciado alrededor de los bordes
-
-        // Agregar los campos de texto al VBox
-        vboxFormulario.getChildren().addAll(
-                new Label("Nombre:"), nombreField,
-                new Label("RFC:"), rfcField,
-                new Label("Teléfono:"), telefonoField,
-                new Label("Código Postal:"), cpField,
-                new Label("Número Exterior:"), noExtField,
-                new Label("Número Interior:"), noIntField,
-                new Label("Calle:"), calleField,
-                new Label("Colonia:"), coloniaField,
-                new Label("Ciudad:"), ciudadField,
-                new Label("Municipio:"), municipioField,
-                new Label("Estado:"), estadoField,
-                new Label("País:"), paisField,
-                new Label("Correo:"), correoField,
-                new Label("CURP:"), curpField,
-                new Label("Es Persona Física:"), personaFisicaCheck,
-                guardarButton, eliminarButton);
-
-        // Crear un ScrollPane para permitir desplazamiento
-        ScrollPane scrollPane = new ScrollPane(vboxFormulario);
-        scrollPane.setFitToWidth(true); // Ajustar el contenido al ancho del scroll
-        scrollPane.setFitToHeight(true); // Ajustar el contenido al alto del scroll
-
-        // Crear la escena con el ScrollPane
-        Scene scene = new Scene(scrollPane, 400, 600);
-        Stage ventanaEdicion = new Stage();
-        ventanaEdicion.setTitle("Editar Proveedor");
-
-        // Establecer un borde y relleno para darle formato a la ventana
-        ventanaEdicion.setScene(scene);
-        ventanaEdicion.setResizable(false); // Evitar que la ventana cambie de tamaño
-        ventanaEdicion.show();
+    /**
+     * Crea una sección con un título destacado
+     * 
+     * @param texto
+     * @return
+     */
+    private Label crearSeccion(String texto) {
+        Label l = new Label(texto);
+        l.setStyle("-fx-font-weight: bold; -fx-text-fill: " + COLOR_PRIMARY
+                + "; -fx-font-size: 14px; -fx-padding: 15 0 5 0;");
+        return l;
     }
 
-    private void actualizarTablaProveedores(TableView<Proveedor> tableView) {
-        List<Proveedor> proveedoresActualizados = controller.consultarTodosProveedores();
-        tableView.getItems().setAll(proveedoresActualizados);
+    /**
+     * Carga los proveedores en la tabla
+     */
+    private void cargarProveedores() {
+        tablaProveedores.getItems().setAll(proveedorService.consultarProveedores());
     }
 
-    private boolean validarCampos(TextField nombre, TextField rfc, TextField telefono, TextField cp, TextField correo,
-            TextField curp) {
-        String mensajeError = "";
-
-        if (nombre.getText().trim().isEmpty()) {
-            mensajeError += "El nombre es obligatorio.\n";
-        }
-        if (!rfc.getText().matches("^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$")) {
-            mensajeError += "El RFC no tiene un formato válido.\n";
-        }
-        if (!telefono.getText().matches("^[0-9]{10}$")) {
-            mensajeError += "El teléfono debe contener 10 dígitos.\n";
-        }
-        if (!cp.getText().matches("^[0-9]{5}$")) {
-            mensajeError += "El código postal debe contener 5 dígitos.\n";
-        }
-        if (!correo.getText().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            mensajeError += "El correo no tiene un formato válido.\n";
-        }
-        if (!curp.getText().matches("[A-Z]{4}[0-9]{6}[A-Z]{6,7}[0-9]{1,2}")) {
-            mensajeError += "El CURP no tiene un formato válido.\n";
+    /**
+     * Registra un nuevo proveedor
+     */
+    private void registrarProveedor() {
+        if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
+                esVacio(txtCalle) || esVacio(txtNoExt) || esVacio(txtCp) ||
+                esVacio(txtColonia) || esVacio(txtCiudad) || esVacio(txtEstado) || esVacio(txtPais)) {
+            mostrarAlertaPersonalizada(Alert.AlertType.WARNING, "Campos Faltantes",
+                    "Por favor llene todos los campos marcados con *");
+            return;
         }
 
-        if (!mensajeError.isEmpty()) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Error de Validación");
-            alert.setHeaderText("Corrige los siguientes errores:");
-            alert.setContentText(mensajeError);
-            alert.show();
-            return false;
+        Proveedor prov = new Proveedor();
+        prov.setNombreProv(txtNombre.getText().trim());
+        prov.setTelefonoProv(txtTelefono.getText().trim());
+        prov.setCorreoProv(txtCorreo.getText().trim());
+
+        // Opcionales
+        prov.setRfcProveedor(txtRfc.getText().isEmpty() ? null : txtRfc.getText().trim());
+        prov.setCurp(txtCurp.getText().isEmpty() ? null : txtCurp.getText().trim());
+
+        try {
+            prov.setCpProveedor(Integer.parseInt(txtCp.getText().trim()));
+            prov.setNoExtProv(Integer.parseInt(txtNoExt.getText().trim()));
+            prov.setNoIntProv(txtNoInt.getText().isEmpty() ? 0 : Integer.parseInt(txtNoInt.getText().trim()));
+        } catch (NumberFormatException e) {
+            mostrarAlertaPersonalizada(Alert.AlertType.ERROR, "Error Numérico",
+                    "CP, No. Ext y No. Int deben ser números válidos.");
+            return;
         }
-        return true;
+
+        prov.setCalle(txtCalle.getText().trim());
+        prov.setColonia(txtColonia.getText().trim());
+        prov.setCiudad(txtCiudad.getText().trim());
+        prov.setMunicipio(txtMunicipio.getText().trim());
+        prov.setEstado(txtEstado.getText().trim());
+        prov.setPais(txtPais.getText().trim());
+
+        String tipoSeleccionado = cmbTipoPersona.getValue();
+        prov.setEsPersonaFisica(tipoSeleccionado != null && tipoSeleccionado.equals("Persona Física"));
+
+        String resultado = proveedorService.guardarProveedor(prov);
+
+        if (resultado.toLowerCase().contains("exitosamente") || resultado.toLowerCase().contains("guardado")) {
+            mostrarAlertaPersonalizada(Alert.AlertType.INFORMATION, "Éxito", resultado);
+            limpiarFormulario();
+            cargarProveedores();
+        } else {
+            mostrarAlertaPersonalizada(Alert.AlertType.ERROR, "Error", resultado);
+        }
     }
 
-    private void cargarProveedoresDesdeExcel() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivos Excel", "*.xlsx"));
-        File file = fileChooser.showOpenDialog(null);
+    /**
+     * Verifica si un TextField está vacío
+     * 
+     * @param tf
+     * @return
+     */
+    private boolean esVacio(TextField tf) {
+        return tf.getText() == null || tf.getText().trim().isEmpty();
+    }
 
-        if (file != null) {
-            try {
-                // Crear instancia del controlador
-                ProveedorController controller = new ProveedorController();
+    /**
+     * Elimina un proveedor
+     * 
+     * @param prov
+     */
+    private void eliminarProveedor(Proveedor prov) {
+        boolean confirmado = mostrarAlertaConfirmacion("Eliminar Proveedor",
+                "¿Seguro que deseas eliminar a: " + prov.getNombreProv() + "?");
 
-                controller.registrarProveedorDesdeExcel(file);
-
-                //showAlert(Alert.AlertType.INFORMATION, "Proveedores registrados desde Excel.");
-            } catch (Exception e) {
-                e.printStackTrace();
-                //showAlert(Alert.AlertType.ERROR, "Error al procesar el archivo Excel: " + e.getMessage());
+        if (confirmado) {
+            if (proveedorService.eliminarProveedor(prov)) {
+                cargarProveedores();
+                mostrarAlertaPersonalizada(Alert.AlertType.INFORMATION, "Eliminado",
+                        "Proveedor eliminado correctamente.");
+            } else {
+                mostrarAlertaPersonalizada(Alert.AlertType.ERROR, "Error", "No se pudo eliminar.");
             }
         }
     }
 
-}*/
+    /**
+     * Limpia el formulario de entrada
+     */
+    private void limpiarFormulario() {
+        txtNombre.clear();
+        txtRfc.clear();
+        txtTelefono.clear();
+        txtCorreo.clear();
+        txtCalle.clear();
+        txtNoExt.clear();
+        txtNoInt.clear();
+        txtCp.clear();
+        txtColonia.clear();
+        txtCiudad.clear();
+        txtMunicipio.clear();
+        txtEstado.clear();
+        txtPais.clear();
+        txtCurp.clear();
+        cmbTipoPersona.getSelectionModel().select(0);
+        lblMensaje.setText("");
+    }
+
+    /**
+     * Muestra un diálogo con el detalle completo del proveedor
+     * 
+     * @param prov
+     */
+    private void mostrarDetalleProveedor(Proveedor prov) {
+        Stage dialog = new Stage();
+        dialog.initOwner(stage);
+        dialog.initModality(Modality.WINDOW_MODAL);
+        dialog.initStyle(StageStyle.TRANSPARENT);
+
+        VBox root = new VBox(20);
+        root.setPadding(new Insets(30));
+        root.setStyle(STYLE_DIALOG_BG + " -fx-background-radius: 12;");
+        root.setMinWidth(500);
+
+        Label lblTitulo = new Label(prov.getNombreProv());
+        lblTitulo.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: " + COLOR_PRIMARY + ";");
+        Label lblSub = new Label(prov.isEsPersonaFisica() ? "Persona Física" : "Persona Moral");
+        lblSub.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 14px;");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(20);
+        grid.setVgap(10);
+
+        agregarDatoGrid(grid, "Teléfono:", prov.getTelefonoProv(), 0, 0);
+        agregarDatoGrid(grid, "Correo:", prov.getCorreoProv(), 1, 0);
+
+        String direccion = String.format("%s #%d%s", prov.getCalle(), prov.getNoExtProv(),
+                (prov.getNoIntProv() > 0 ? " Int " + prov.getNoIntProv() : ""));
+        agregarDatoGrid(grid, "Dirección:", direccion, 0, 1);
+        agregarDatoGrid(grid, "Colonia/CP:", prov.getColonia() + " C.P. " + prov.getCpProveedor(), 1, 1);
+
+        agregarDatoGrid(grid, "Ciudad/Mun:", prov.getCiudad() + ", " + prov.getMunicipio(), 0, 2);
+        agregarDatoGrid(grid, "Estado/País:", prov.getEstado() + ", " + prov.getPais(), 1, 2);
+
+        if (prov.getCurp() != null)
+            agregarDatoGrid(grid, "CURP:", prov.getCurp(), 0, 3);
+
+        if (prov.getRfcProveedor() != null) {
+            agregarDatoGrid(grid, "RFC:", prov.getRfcProveedor(), 1, 3);
+            
+        }
+
+        Button btnCerrar = new Button("Cerrar");
+        crearBotonSecundario(btnCerrar);
+        btnCerrar.setOnAction(e -> dialog.close());
+
+        HBox footer = new HBox(btnCerrar);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+
+        root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
+
+        Scene scene = new Scene(root);
+        scene.setFill(Color.TRANSPARENT);
+        dialog.setScene(scene);
+        dialog.showAndWait();
+    }
+
+    /**
+     * Agrega un par de Label al GridPane para mostrar un dato
+     * 
+     * @param grid
+     * @param label
+     * @param valor
+     * @param col
+     * @param row
+     */
+    private void agregarDatoGrid(GridPane grid, String label, String valor, int col, int row) {
+        Label l = new Label(label);
+        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
+        Label v = new Label(valor != null ? valor : "-");
+        v.setStyle("-fx-text-fill: #4B5563; -fx-wrap-text: true;");
+        v.setMaxWidth(200);
+        VBox box = new VBox(2, l, v);
+        grid.add(box, col, row);
+    }
+
+    /**
+     * Crea un TextField estilizado
+     * 
+     * @param prompt
+     * @return
+     */
+    private TextField crearCampoTexto(String prompt) {
+        TextField tf = new TextField();
+        tf.setPromptText(prompt);
+        tf.setStyle(STYLE_INPUT);
+        return tf;
+    }
+
+    /**
+     * Botón primario
+     * 
+     * @param btn
+     */
+    private void crearBotonPrimario(Button btn) {
+        btn.setPrefHeight(40);
+        btn.setStyle("-fx-background-color: " + COLOR_PRIMARY
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: " + COLOR_PRIMARY_HOVER
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;"));
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: " + COLOR_PRIMARY
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;"));
+    }
+
+    /**
+     * Botón secundario
+     * 
+     * @param btn
+     */
+    private void crearBotonSecundario(Button btn) {
+        btn.setPrefHeight(35);
+        btn.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D1D5DB; -fx-text-fill: #374151; -fx-font-weight: 600; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;");
+        btn.setOnMouseEntered(e -> btn.setStyle(
+                "-fx-background-color: #F9FAFB; -fx-border-color: #9CA3AF; -fx-text-fill: #111827; -fx-font-weight: 600; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;"));
+        btn.setOnMouseExited(e -> btn.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D1D5DB; -fx-text-fill: #374151; -fx-font-weight: 600; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;"));
+    }
+
+    /**
+     * Botón de texto
+     * 
+     * @param btn
+     */
+    private void crearBotonTexto(Button btn) {
+        btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #6B7280; -fx-cursor: hand;");
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: " + COLOR_PRIMARY
+                + "; -fx-cursor: hand; -fx-underline: true;"));
+        btn.setOnMouseExited(
+                e -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #6B7280; -fx-cursor: hand;"));
+    }
+
+    /**
+     * Muestra una alerta personalizada
+     * 
+     * @param tipo
+     * @param titulo
+     * @param mensaje
+     */
+    private void mostrarAlertaPersonalizada(Alert.AlertType tipo, String titulo, String mensaje) {
+        Stage alertStage = new Stage();
+        alertStage.initOwner(stage);
+        alertStage.initModality(Modality.WINDOW_MODAL);
+        alertStage.initStyle(StageStyle.TRANSPARENT);
+
+        VBox root = new VBox(20);
+        root.setPadding(new Insets(25));
+        root.setStyle(STYLE_DIALOG_BG + " -fx-background-radius: 12;");
+        root.setMinWidth(350);
+        root.setMaxWidth(350);
+
+        String colorTitulo = tipo == Alert.AlertType.ERROR ? "#DC2626"
+                : (tipo == Alert.AlertType.WARNING ? "#D97706" : COLOR_PRIMARY);
+
+        Label lblTitulo = new Label(titulo);
+        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + colorTitulo + ";");
+
+        Label lblMsg = new Label(mensaje);
+        lblMsg.setWrapText(true);
+        lblMsg.setStyle("-fx-text-fill: #374151; -fx-font-size: 14px;");
+
+        HBox botones = new HBox();
+        botones.setAlignment(Pos.CENTER_RIGHT);
+
+        Button btnOk = new Button("Entendido");
+        if (tipo == Alert.AlertType.ERROR) {
+            btnOk.setStyle(
+                    "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+        } else {
+            crearBotonPrimario(btnOk);
+        }
+        btnOk.setOnAction(e -> alertStage.close());
+
+        botones.getChildren().add(btnOk);
+        root.getChildren().addAll(lblTitulo, lblMsg, botones);
+
+        Scene scene = new Scene(root);
+        scene.setFill(Color.TRANSPARENT);
+        alertStage.setScene(scene);
+        alertStage.showAndWait();
+    }
+
+    /**
+     * Muestra una alerta de confirmación
+     * 
+     * @param titulo
+     * @param mensaje
+     * @return
+     */
+    private boolean mostrarAlertaConfirmacion(String titulo, String mensaje) {
+        Stage alertStage = new Stage();
+        alertStage.initOwner(stage);
+        alertStage.initModality(Modality.WINDOW_MODAL);
+        alertStage.initStyle(StageStyle.TRANSPARENT);
+
+        VBox root = new VBox(20);
+        root.setPadding(new Insets(25));
+        root.setStyle(STYLE_DIALOG_BG + " -fx-background-radius: 12;");
+        root.setMinWidth(380);
+
+        Label lblTitulo = new Label(titulo);
+        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+
+        Label lblMsg = new Label(mensaje);
+        lblMsg.setWrapText(true);
+        lblMsg.setStyle("-fx-text-fill: #374151; -fx-font-size: 14px;");
+
+        HBox botones = new HBox(15);
+        botones.setAlignment(Pos.CENTER_RIGHT);
+
+        Button btnNo = new Button("Cancelar");
+        crearBotonSecundario(btnNo);
+
+        Button btnSi = new Button("Confirmar");
+        btnSi.setStyle(
+                "-fx-background-color: #DC2626; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        final boolean[] respuesta = { false };
+
+        btnNo.setOnAction(e -> {
+            respuesta[0] = false;
+            alertStage.close();
+        });
+
+        btnSi.setOnAction(e -> {
+            respuesta[0] = true;
+            alertStage.close();
+        });
+
+        botones.getChildren().addAll(btnNo, btnSi);
+        root.getChildren().addAll(lblTitulo, lblMsg, botones);
+
+        Scene scene = new Scene(root);
+        scene.setFill(Color.TRANSPARENT);
+        alertStage.setScene(scene);
+        alertStage.showAndWait();
+
+        return respuesta[0];
+    }
+}
