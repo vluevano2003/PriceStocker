@@ -42,8 +42,12 @@ public class ProveedorView {
     private ComboBox<String> cmbTipoPersona;
     private Label lblMensaje;
 
+    private Proveedor proveedorEnEdicion = null;
+    private Button btnGuardar;
+    private Label lblTituloFormulario;
+
     /**
-     * Muestra la vista de gestión de proveedores
+     * Muestra la pantalla de gestión de proveedores
      * 
      * @param stage
      * @param usuarioActual
@@ -97,6 +101,7 @@ public class ProveedorView {
 
     /**
      * Crea el panel con la tabla de proveedores
+     * 
      * @return
      */
     @SuppressWarnings("unchecked")
@@ -139,27 +144,44 @@ public class ProveedorView {
         });
 
         TableColumn<Proveedor, Void> colAcciones = new TableColumn<>("Acciones");
+        colAcciones.setMinWidth(140);
         colAcciones.setCellFactory(param -> new TableCell<>() {
+
+            // Botón Editar
+            private final Button btnEditar = new Button("Editar");
+            {
+                btnEditar.setStyle(
+                        "-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-cursor: hand; -fx-font-size: 11px; -fx-font-weight: bold;");
+                btnEditar.setOnAction(e -> prepararEdicion(getTableView().getItems().get(getIndex())));
+            }
+
+            // Botón Eliminar
             private final Button btnEliminar = new Button("Eliminar");
             {
                 btnEliminar.setStyle(
                         "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-cursor: hand; -fx-font-size: 11px;");
                 btnEliminar.setOnAction(e -> eliminarProveedor(getTableView().getItems().get(getIndex())));
-                setAlignment(Pos.CENTER);
+            }
+
+            private final HBox container = new HBox(5, btnEditar, btnEliminar);
+            {
+                container.setAlignment(Pos.CENTER);
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : btnEliminar);
+                setGraphic(empty ? null : container);
             }
         });
 
         tablaProveedores.getColumns().addAll(colId, colNombre, colTel, colCorreo, colDireccion, colAcciones);
         VBox.setVgrow(tablaProveedores, Priority.ALWAYS);
-        tablaProveedores.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-            if (newVal != null)
-                mostrarDetalleProveedor(newVal);
+
+        tablaProveedores.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && tablaProveedores.getSelectionModel().getSelectedItem() != null) {
+                mostrarDetalleProveedor(tablaProveedores.getSelectionModel().getSelectedItem());
+            }
         });
 
         box.getChildren().addAll(topBar, tablaProveedores);
@@ -167,17 +189,17 @@ public class ProveedorView {
     }
 
     /**
-     * Crea el panel con el formulario para agregar un nuevo proveedor
+     * Crea el panel con el formulario de proveedores
      * @return
      */
     private VBox crearPanelFormulario() {
         VBox card = new VBox(0);
         card.setStyle(AppTheme.STYLE_CARD);
 
-        Label lblTitle = new Label("Nuevo Proveedor");
-        lblTitle.setStyle(
+        lblTituloFormulario = new Label("Nuevo Proveedor");
+        lblTituloFormulario.setStyle(
                 "-fx-font-family: 'Segoe UI'; -fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #111827;");
-        lblTitle.setPadding(new Insets(20));
+        lblTituloFormulario.setPadding(new Insets(20));
 
         VBox inputsContainer = new VBox(10);
         inputsContainer.setPadding(new Insets(0, 20, 20, 20));
@@ -229,11 +251,11 @@ public class ProveedorView {
         VBox footer = new VBox(10);
         footer.setPadding(new Insets(20));
 
-        Button btnGuardar = UIFactory.crearBotonPrimario("Registrar Proveedor");
+        btnGuardar = UIFactory.crearBotonPrimario("Registrar Proveedor");
         btnGuardar.setMaxWidth(Double.MAX_VALUE);
         btnGuardar.setOnAction(e -> registrarProveedor());
 
-        Button btnLimpiar = UIFactory.crearBotonTexto("Limpiar Formulario");
+        Button btnLimpiar = UIFactory.crearBotonTexto("Limpiar / Cancelar");
         btnLimpiar.setMaxWidth(Double.MAX_VALUE);
         btnLimpiar.setOnAction(e -> limpiarFormulario());
 
@@ -241,12 +263,12 @@ public class ProveedorView {
         lblMensaje.setWrapText(true);
 
         footer.getChildren().addAll(btnGuardar, btnLimpiar, lblMensaje);
-        card.getChildren().addAll(lblTitle, scrollPane, footer);
+        card.getChildren().addAll(lblTituloFormulario, scrollPane, footer);
         return card;
     }
 
     /**
-     * Crea un VBox con un Label y un campo de entrada
+     * Crea un contenedor VBox con un label y un campo de entrada
      * @param textoLabel
      * @param campo
      * @return
@@ -262,7 +284,7 @@ public class ProveedorView {
     }
 
     /**
-     * Crea un Label para secciones del formulario
+     * Crea un label de sección con estilo
      * @param texto
      * @return
      */
@@ -274,7 +296,41 @@ public class ProveedorView {
     }
 
     /**
-     * Registra un nuevo proveedor
+     * Prepara el formulario para editar un proveedor existente
+     * @param p
+     */
+    private void prepararEdicion(Proveedor p) {
+        this.proveedorEnEdicion = p;
+
+        lblTituloFormulario.setText("Editar Proveedor (ID: " + p.getIdProveedor() + ")");
+        btnGuardar.setText("Actualizar Proveedor");
+        btnGuardar.setStyle(
+                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        txtNombre.setText(p.getNombreProv());
+        txtTelefono.setText(p.getTelefonoProv());
+        txtCorreo.setText(p.getCorreoProv());
+        txtCalle.setText(p.getCalle());
+        txtNoExt.setText(String.valueOf(p.getNoExtProv()));
+        txtNoInt.setText(p.getNoIntProv() == 0 ? "" : String.valueOf(p.getNoIntProv()));
+        txtCp.setText(String.valueOf(p.getCpProveedor()));
+        txtColonia.setText(p.getColonia());
+        txtCiudad.setText(p.getCiudad());
+        txtMunicipio.setText(p.getMunicipio());
+        txtEstado.setText(p.getEstado());
+        txtPais.setText(p.getPais());
+        txtRfc.setText(p.getRfcProveedor() == null ? "" : p.getRfcProveedor());
+        txtCurp.setText(p.getCurp() == null ? "" : p.getCurp());
+
+        if (p.isEsPersonaFisica()) {
+            cmbTipoPersona.getSelectionModel().select("Persona Física");
+        } else {
+            cmbTipoPersona.getSelectionModel().select("Persona Moral");
+        }
+    }
+
+    /**
+     * Registra o actualiza un proveedor según el estado del formulario
      */
     private void registrarProveedor() {
         if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
@@ -285,11 +341,16 @@ public class ProveedorView {
             return;
         }
 
-        Proveedor prov = new Proveedor();
+        Proveedor prov;
+        if (proveedorEnEdicion != null) {
+            prov = proveedorEnEdicion;
+        } else {
+            prov = new Proveedor();
+        }
+
         prov.setNombreProv(txtNombre.getText().trim());
         prov.setTelefonoProv(txtTelefono.getText().trim());
         prov.setCorreoProv(txtCorreo.getText().trim());
-
         prov.setRfcProveedor(esVacio(txtRfc) ? null : txtRfc.getText().trim());
         prov.setCurp(esVacio(txtCurp) ? null : txtCurp.getText().trim());
 
@@ -314,8 +375,11 @@ public class ProveedorView {
         prov.setEsPersonaFisica(tipoSeleccionado != null && tipoSeleccionado.equals("Persona Física"));
 
         String res = proveedorService.guardarProveedor(prov);
+
         if (res.toLowerCase().contains("exitosamente") || res.toLowerCase().contains("guardado")) {
-            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", res, stage);
+            String accion = (proveedorEnEdicion != null) ? "actualizado" : "guardado";
+            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Proveedor " + accion + " correctamente.",
+                    stage);
             limpiarFormulario();
             cargarProveedores();
         } else {
@@ -328,6 +392,10 @@ public class ProveedorView {
      * @param prov
      */
     private void eliminarProveedor(Proveedor prov) {
+        if (proveedorEnEdicion != null && proveedorEnEdicion.getIdProveedor().equals(prov.getIdProveedor())) {
+            limpiarFormulario();
+        }
+
         if (dialogService.mostrarConfirmacion("Eliminar Proveedor",
                 "¿Seguro que deseas eliminar a " + prov.getNombreProv() + "?", stage)) {
             if (proveedorService.eliminarProveedor(prov)) {
@@ -348,9 +416,16 @@ public class ProveedorView {
     }
 
     /**
-     * Limpia el formulario de entrada
+     * Limpia el formulario y resetea el estado
      */
     private void limpiarFormulario() {
+        this.proveedorEnEdicion = null;
+        lblTituloFormulario.setText("Nuevo Proveedor");
+
+        btnGuardar.setText("Registrar Proveedor");
+        btnGuardar.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
         txtNombre.clear();
         txtTelefono.clear();
         txtCorreo.clear();
@@ -370,7 +445,7 @@ public class ProveedorView {
     }
 
     /**
-     * Verifica si un TextField está vacío
+     * Verifica si un campo de texto está vacío
      * @param tf
      * @return
      */
@@ -433,7 +508,7 @@ public class ProveedorView {
     }
 
     /**
-     * Agrega un label y valor al GridPane
+     * Agrega un par de label al grid con formato
      * @param grid
      * @param label
      * @param valor
