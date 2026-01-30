@@ -1,4 +1,4 @@
-package com.vluevano.model;
+/**package com.vluevano.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -248,4 +248,4 @@ public class Empresa {
     public String toString() {
         return this.nombreEmpresa;
     }
-}
+}*/

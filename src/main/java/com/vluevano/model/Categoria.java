@@ -12,11 +12,13 @@ public class Categoria {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idcategoria")
     private Integer idCategoria;
 
-    @Column(unique = true, nullable = false)
-    private String nombreCategoria;
+    @Column(name = "nombrecategoria", unique = true, nullable = false)
+    private String nombreCategoria; 
 
+    @Column(name = "desccategoria")
     private String descripcionCategoria;
 
     @Override
