@@ -128,12 +128,15 @@ public class ProveedorView {
 
         TableColumn<Proveedor, String> colNombre = new TableColumn<>("Proveedor");
         colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getNombreProv()));
+        colNombre.setMinWidth(150);
 
         TableColumn<Proveedor, String> colTel = new TableColumn<>("Teléfono");
         colTel.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTelefonoProv()));
+        colTel.setMinWidth(100);
 
         TableColumn<Proveedor, String> colCorreo = new TableColumn<>("Correo");
         colCorreo.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCorreoProv()));
+        colCorreo.setMinWidth(150);
 
         TableColumn<Proveedor, String> colDireccion = new TableColumn<>("Dirección Completa");
         colDireccion.setCellValueFactory(data -> {
@@ -145,9 +148,9 @@ public class ProveedorView {
 
         TableColumn<Proveedor, Void> colAcciones = new TableColumn<>("Acciones");
         colAcciones.setMinWidth(140);
+        colAcciones.setMaxWidth(140);
         colAcciones.setCellFactory(param -> new TableCell<>() {
 
-            // Botón Editar
             private final Button btnEditar = new Button("Editar");
             {
                 btnEditar.setStyle(
@@ -155,7 +158,6 @@ public class ProveedorView {
                 btnEditar.setOnAction(e -> prepararEdicion(getTableView().getItems().get(getIndex())));
             }
 
-            // Botón Eliminar
             private final Button btnEliminar = new Button("Eliminar");
             {
                 btnEliminar.setStyle(
@@ -284,7 +286,7 @@ public class ProveedorView {
     }
 
     /**
-     * Crea un label de sección con estilo
+     * Crea una sección con estilo para el formulario
      * @param texto
      * @return
      */
@@ -416,7 +418,7 @@ public class ProveedorView {
     }
 
     /**
-     * Limpia el formulario y resetea el estado
+     * Limpia el formulario y resetea su estado
      */
     private void limpiarFormulario() {
         this.proveedorEnEdicion = null;
@@ -445,7 +447,7 @@ public class ProveedorView {
     }
 
     /**
-     * Verifica si un campo de texto está vacío
+     * Verifica si un TextField está vacío
      * @param tf
      * @return
      */
@@ -454,7 +456,7 @@ public class ProveedorView {
     }
 
     /**
-     * Muestra un diálogo con el detalle del proveedor
+     * Muestra un diálogo con el detalle completo del proveedor
      * @param prov
      */
     private void mostrarDetalleProveedor(Proveedor prov) {
@@ -508,7 +510,7 @@ public class ProveedorView {
     }
 
     /**
-     * Agrega un par de label al grid con formato
+     * Agrega un label y su valor a un GridPane
      * @param grid
      * @param label
      * @param valor

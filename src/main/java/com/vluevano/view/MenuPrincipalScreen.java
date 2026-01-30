@@ -37,6 +37,10 @@ public class MenuPrincipalScreen {
     @Lazy
     private ProveedorView proveedorView;
 
+    @Autowired
+    @Lazy
+    private ClienteView clienteView;
+
     private Stage stage;
     private BorderPane rootLayout;
     private String usuarioActual;
@@ -192,10 +196,8 @@ public class MenuPrincipalScreen {
 
         // DIRECTORIO
         sidebar.getChildren().add(crearTituloSeccion("DIRECTORIO"));
-        sidebar.getChildren().add(crearBotonMenu("Proveedores", () -> {
-            proveedorView.show(stage, usuarioActual);
-        }));
-        sidebar.getChildren().add(crearBotonMenu("Clientes", () -> System.out.println("Navegar a Clientes")));
+        sidebar.getChildren().add(crearBotonMenu("Proveedores", () -> { proveedorView.show(stage, usuarioActual);}));
+        sidebar.getChildren().add(crearBotonMenu("Clientes", () -> clienteView.show(stage, usuarioActual)));
         sidebar.getChildren().add(crearBotonMenu("Fabricantes", () -> System.out.println("Navegar a Fabricantes")));
         sidebar.getChildren().add(crearBotonMenu("Empresas Mercado", () -> System.out.println("Navegar a Empresas")));
         sidebar.getChildren()
