@@ -8,14 +8,10 @@ import com.vluevano.util.UIFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -47,7 +43,7 @@ public class ProveedorView {
     private Label lblTituloFormulario;
 
     /**
-     * Muestra la pantalla de gestión de proveedores
+     * Muestra la vista de gestión de proveedores
      * 
      * @param stage
      * @param usuarioActual
@@ -100,7 +96,7 @@ public class ProveedorView {
     }
 
     /**
-     * Crea el panel con la tabla de proveedores
+     * Crea el panel de la tabla de proveedores
      * 
      * @return
      */
@@ -141,29 +137,19 @@ public class ProveedorView {
         TableColumn<Proveedor, String> colDireccion = new TableColumn<>("Dirección Completa");
         colDireccion.setCellValueFactory(data -> {
             Proveedor p = data.getValue();
-            return new SimpleStringProperty(String.format("%s #%d, %s, CP %d, %s, %s, %s",
-                    p.getCalle(), p.getNoExtProv(), p.getColonia(), p.getCpProveedor(),
-                    p.getCiudad(), p.getEstado(), p.getPais()));
+            return new SimpleStringProperty(String.format("%s #%d, %s",
+                    p.getCalle(), p.getNoExtProv(), p.getColonia()));
         });
 
         TableColumn<Proveedor, Void> colAcciones = new TableColumn<>("Acciones");
         colAcciones.setMinWidth(140);
         colAcciones.setMaxWidth(140);
         colAcciones.setCellFactory(param -> new TableCell<>() {
+            private final Button btnEditar = UIFactory
+                    .crearBotonTablaEditar(() -> prepararEdicion(getTableView().getItems().get(getIndex())));
 
-            private final Button btnEditar = new Button("Editar");
-            {
-                btnEditar.setStyle(
-                        "-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-cursor: hand; -fx-font-size: 11px; -fx-font-weight: bold;");
-                btnEditar.setOnAction(e -> prepararEdicion(getTableView().getItems().get(getIndex())));
-            }
-
-            private final Button btnEliminar = new Button("Eliminar");
-            {
-                btnEliminar.setStyle(
-                        "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-cursor: hand; -fx-font-size: 11px;");
-                btnEliminar.setOnAction(e -> eliminarProveedor(getTableView().getItems().get(getIndex())));
-            }
+            private final Button btnEliminar = UIFactory
+                    .crearBotonTablaEliminar(() -> eliminarProveedor(getTableView().getItems().get(getIndex())));
 
             private final HBox container = new HBox(5, btnEditar, btnEliminar);
             {
@@ -191,7 +177,8 @@ public class ProveedorView {
     }
 
     /**
-     * Crea el panel con el formulario de proveedores
+     * Crea el panel del formulario de registro/edición de proveedores
+     * 
      * @return
      */
     private VBox crearPanelFormulario() {
@@ -228,22 +215,28 @@ public class ProveedorView {
         cmbTipoPersona.setStyle(AppTheme.STYLE_INPUT);
 
         inputsContainer.getChildren().addAll(
-                crearSeccion("Datos Personales"),
-                crearInputConLabel("Nombre / Razón *", txtNombre),
-                crearInputConLabel("Teléfono *", txtTelefono),
-                crearInputConLabel("Correo *", txtCorreo),
-                crearSeccion("Dirección"),
-                crearInputConLabel("Calle *", txtCalle),
-                new HBox(10, crearInputConLabel("No. Ext *", txtNoExt), crearInputConLabel("No. Int", txtNoInt),
-                        crearInputConLabel("C.P. *", txtCp)),
-                crearInputConLabel("Colonia *", txtColonia),
-                crearInputConLabel("Ciudad *", txtCiudad),
-                crearInputConLabel("Municipio *", txtMunicipio),
-                new HBox(10, crearInputConLabel("Estado *", txtEstado), crearInputConLabel("País *", txtPais)),
-                crearSeccion("Datos Fiscales"),
-                crearInputConLabel("Tipo Persona", cmbTipoPersona),
-                crearInputConLabel("RFC", txtRfc),
-                crearInputConLabel("CURP", txtCurp));
+                UIFactory.crearTituloSeccion("Datos Personales"),
+                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
+                UIFactory.crearGrupoInput("Correo *", txtCorreo),
+
+                UIFactory.crearTituloSeccion("Dirección"),
+                UIFactory.crearGrupoInput("Calle *", txtCalle),
+                new HBox(10,
+                        UIFactory.crearGrupoInput("No. Ext *", txtNoExt),
+                        UIFactory.crearGrupoInput("No. Int", txtNoInt),
+                        UIFactory.crearGrupoInput("C.P. *", txtCp)),
+                UIFactory.crearGrupoInput("Colonia *", txtColonia),
+                UIFactory.crearGrupoInput("Ciudad *", txtCiudad),
+                UIFactory.crearGrupoInput("Municipio *", txtMunicipio),
+                new HBox(10,
+                        UIFactory.crearGrupoInput("Estado *", txtEstado),
+                        UIFactory.crearGrupoInput("País *", txtPais)),
+
+                UIFactory.crearTituloSeccion("Datos Fiscales"),
+                UIFactory.crearGrupoInput("Tipo Persona", cmbTipoPersona),
+                UIFactory.crearGrupoInput("RFC", txtRfc),
+                UIFactory.crearGrupoInput("CURP", txtCurp));
 
         ScrollPane scrollPane = new ScrollPane(inputsContainer);
         scrollPane.setFitToWidth(true);
@@ -270,68 +263,6 @@ public class ProveedorView {
     }
 
     /**
-     * Crea un contenedor VBox con un label y un campo de entrada
-     * @param textoLabel
-     * @param campo
-     * @return
-     */
-    private VBox crearInputConLabel(String textoLabel, Node campo) {
-        Label l = new Label(textoLabel);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;");
-        if (textoLabel.contains("*"))
-            l.setTextFill(Color.web(AppTheme.COLOR_PRIMARY));
-        VBox v = new VBox(5, l, campo);
-        HBox.setHgrow(v, Priority.ALWAYS);
-        return v;
-    }
-
-    /**
-     * Crea una sección con estilo para el formulario
-     * @param texto
-     * @return
-     */
-    private Label crearSeccion(String texto) {
-        Label l = new Label(texto);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY
-                + "; -fx-font-size: 14px; -fx-padding: 15 0 5 0;");
-        return l;
-    }
-
-    /**
-     * Prepara el formulario para editar un proveedor existente
-     * @param p
-     */
-    private void prepararEdicion(Proveedor p) {
-        this.proveedorEnEdicion = p;
-
-        lblTituloFormulario.setText("Editar Proveedor (ID: " + p.getIdProveedor() + ")");
-        btnGuardar.setText("Actualizar Proveedor");
-        btnGuardar.setStyle(
-                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
-
-        txtNombre.setText(p.getNombreProv());
-        txtTelefono.setText(p.getTelefonoProv());
-        txtCorreo.setText(p.getCorreoProv());
-        txtCalle.setText(p.getCalle());
-        txtNoExt.setText(String.valueOf(p.getNoExtProv()));
-        txtNoInt.setText(p.getNoIntProv() == 0 ? "" : String.valueOf(p.getNoIntProv()));
-        txtCp.setText(String.valueOf(p.getCpProveedor()));
-        txtColonia.setText(p.getColonia());
-        txtCiudad.setText(p.getCiudad());
-        txtMunicipio.setText(p.getMunicipio());
-        txtEstado.setText(p.getEstado());
-        txtPais.setText(p.getPais());
-        txtRfc.setText(p.getRfcProveedor() == null ? "" : p.getRfcProveedor());
-        txtCurp.setText(p.getCurp() == null ? "" : p.getCurp());
-
-        if (p.isEsPersonaFisica()) {
-            cmbTipoPersona.getSelectionModel().select("Persona Física");
-        } else {
-            cmbTipoPersona.getSelectionModel().select("Persona Moral");
-        }
-    }
-
-    /**
      * Registra o actualiza un proveedor según el estado del formulario
      */
     private void registrarProveedor() {
@@ -343,12 +274,7 @@ public class ProveedorView {
             return;
         }
 
-        Proveedor prov;
-        if (proveedorEnEdicion != null) {
-            prov = proveedorEnEdicion;
-        } else {
-            prov = new Proveedor();
-        }
+        Proveedor prov = (proveedorEnEdicion != null) ? proveedorEnEdicion : new Proveedor();
 
         prov.setNombreProv(txtNombre.getText().trim());
         prov.setTelefonoProv(txtTelefono.getText().trim());
@@ -390,7 +316,8 @@ public class ProveedorView {
     }
 
     /**
-     * Elimina un proveedor
+     * Elimina un proveedor después de la confirmación del usuario
+     * 
      * @param prov
      */
     private void eliminarProveedor(Proveedor prov) {
@@ -447,23 +374,47 @@ public class ProveedorView {
     }
 
     /**
-     * Verifica si un TextField está vacío
-     * @param tf
-     * @return
+     * Prepara el formulario para editar un proveedor existente
+     * 
+     * @param p
      */
-    private boolean esVacio(TextField tf) {
-        return tf.getText() == null || tf.getText().trim().isEmpty();
+    private void prepararEdicion(Proveedor p) {
+        this.proveedorEnEdicion = p;
+        lblTituloFormulario.setText("Editar Proveedor (ID: " + p.getIdProveedor() + ")");
+        btnGuardar.setText("Actualizar Proveedor");
+        btnGuardar.setStyle(
+                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        txtNombre.setText(p.getNombreProv());
+        txtTelefono.setText(p.getTelefonoProv());
+        txtCorreo.setText(p.getCorreoProv());
+        txtCalle.setText(p.getCalle());
+        txtNoExt.setText(String.valueOf(p.getNoExtProv()));
+        txtNoInt.setText(p.getNoIntProv() == 0 ? "" : String.valueOf(p.getNoIntProv()));
+        txtCp.setText(String.valueOf(p.getCpProveedor()));
+        txtColonia.setText(p.getColonia());
+        txtCiudad.setText(p.getCiudad());
+        txtMunicipio.setText(p.getMunicipio());
+        txtEstado.setText(p.getEstado());
+        txtPais.setText(p.getPais());
+        txtRfc.setText(p.getRfcProveedor() == null ? "" : p.getRfcProveedor());
+        txtCurp.setText(p.getCurp() == null ? "" : p.getCurp());
+
+        if (p.isEsPersonaFisica())
+            cmbTipoPersona.getSelectionModel().select("Persona Física");
+        else
+            cmbTipoPersona.getSelectionModel().select("Persona Moral");
     }
 
     /**
-     * Muestra un diálogo con el detalle completo del proveedor
+     * Muestra un diálogo con los detalles completos del proveedor
+     * 
      * @param prov
      */
     private void mostrarDetalleProveedor(Proveedor prov) {
         Stage dialog = new Stage();
-        dialog.initOwner(stage);
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.initStyle(StageStyle.TRANSPARENT);
+
+        UIFactory.configurarStageModal(dialog, stage);
 
         VBox root = new VBox(20);
         root.setPadding(new Insets(30));
@@ -481,22 +432,22 @@ public class ProveedorView {
         grid.setHgap(20);
         grid.setVgap(10);
 
-        agregarDatoGrid(grid, "Teléfono:", prov.getTelefonoProv(), 0, 0);
-        agregarDatoGrid(grid, "Correo:", prov.getCorreoProv(), 1, 0);
+        grid.add(UIFactory.crearDatoDetalle("Teléfono:", prov.getTelefonoProv()), 0, 0);
+        grid.add(UIFactory.crearDatoDetalle("Correo:", prov.getCorreoProv()), 1, 0);
 
         String direccion = String.format("%s #%d%s", prov.getCalle(), prov.getNoExtProv(),
                 (prov.getNoIntProv() > 0 ? " Int " + prov.getNoIntProv() : ""));
-        agregarDatoGrid(grid, "Dirección:", direccion, 0, 1);
-        agregarDatoGrid(grid, "Colonia/CP:", prov.getColonia() + " C.P. " + prov.getCpProveedor(), 1, 1);
+        grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
+        grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", prov.getColonia() + " C.P. " + prov.getCpProveedor()), 1, 1);
 
-        agregarDatoGrid(grid, "Ciudad/Mun:", prov.getCiudad() + ", " + prov.getMunicipio(), 0, 2);
-        agregarDatoGrid(grid, "Estado/País:", prov.getEstado() + ", " + prov.getPais(), 1, 2);
+        grid.add(UIFactory.crearDatoDetalle("Ciudad/Mun:", prov.getCiudad() + ", " + prov.getMunicipio()), 0, 2);
+        grid.add(UIFactory.crearDatoDetalle("Estado/País:", prov.getEstado() + ", " + prov.getPais()), 1, 2);
 
         if (prov.getCurp() != null && !prov.getCurp().isEmpty())
-            agregarDatoGrid(grid, "CURP:", prov.getCurp(), 0, 3);
+            grid.add(UIFactory.crearDatoDetalle("CURP:", prov.getCurp()), 0, 3);
 
         if (prov.getRfcProveedor() != null && !prov.getRfcProveedor().isEmpty())
-            agregarDatoGrid(grid, "RFC:", prov.getRfcProveedor(), 1, 3);
+            grid.add(UIFactory.crearDatoDetalle("RFC:", prov.getRfcProveedor()), 1, 3);
 
         Button btnCerrar = UIFactory.crearBotonSecundario("Cerrar");
         btnCerrar.setOnAction(e -> dialog.close());
@@ -505,25 +456,16 @@ public class ProveedorView {
         footer.setAlignment(Pos.CENTER_RIGHT);
 
         root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
-
         dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 
     /**
-     * Agrega un label y su valor a un GridPane
-     * @param grid
-     * @param label
-     * @param valor
-     * @param col
-     * @param row
+     * Verifica si un TextField está vacío
+     * 
+     * @param tf
+     * @return
      */
-    private void agregarDatoGrid(GridPane grid, String label, String valor, int col, int row) {
-        Label l = new Label(label);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
-        Label v = new Label(valor != null ? valor : "-");
-        v.setStyle("-fx-text-fill: #4B5563; -fx-wrap-text: true;");
-        v.setMaxWidth(200);
-        VBox box = new VBox(2, l, v);
-        grid.add(box, col, row);
+    private boolean esVacio(TextField tf) {
+        return tf.getText() == null || tf.getText().trim().isEmpty();
     }
 }

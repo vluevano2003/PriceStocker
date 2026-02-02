@@ -8,14 +8,10 @@ import com.vluevano.util.UIFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -39,17 +35,15 @@ public class FabricanteView {
     private TextField txtNombre, txtRfc, txtTelefono, txtCorreo;
     private TextField txtCp, txtNoExt, txtNoInt, txtCalle, txtColonia, txtCiudad, txtMunicipio, txtEstado, txtPais;
     private TextField txtCurp;
-
     private ComboBox<String> cmbTipoPersona;
 
     private Label lblMensaje;
-
     private Fabricante fabricanteEnEdicion = null;
     private Button btnGuardar;
     private Label lblTituloFormulario;
 
     /**
-     * Muestra la pantalla de gestión de fabricantes
+     * Muestra la vista de gestión de fabricantes
      * 
      * @param stage
      * @param usuarioActual
@@ -74,7 +68,7 @@ public class FabricanteView {
     }
 
     /**
-     * Crea el contenido principal de la pantalla
+     * Crea el contenido principal de la vista
      * 
      * @return
      */
@@ -102,7 +96,7 @@ public class FabricanteView {
     }
 
     /**
-     * Crea el panel con la tabla de fabricantes y el filtro de búsqueda
+     * Crea el panel con la tabla de fabricantes
      * 
      * @return
      */
@@ -143,28 +137,19 @@ public class FabricanteView {
         TableColumn<Fabricante, String> colDireccion = new TableColumn<>("Dirección Completa");
         colDireccion.setCellValueFactory(data -> {
             Fabricante f = data.getValue();
-            return new SimpleStringProperty(String.format("%s #%d, %s, CP %d, %s, %s, %s",
-                    f.getCalle(), f.getNoExtFabricante(), f.getColonia(), f.getCpFabricante(),
-                    f.getCiudad(), f.getEstado(), f.getPais()));
+            return new SimpleStringProperty(String.format("%s #%d, %s",
+                    f.getCalle(), f.getNoExtFabricante(), f.getColonia()));
         });
 
         TableColumn<Fabricante, Void> colAcciones = new TableColumn<>("Acciones");
         colAcciones.setMinWidth(140);
         colAcciones.setMaxWidth(140);
         colAcciones.setCellFactory(param -> new TableCell<>() {
-            private final Button btnEditar = new Button("Editar");
-            {
-                btnEditar.setStyle(
-                        "-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-cursor: hand; -fx-font-size: 11px; -fx-font-weight: bold;");
-                btnEditar.setOnAction(e -> prepararEdicion(getTableView().getItems().get(getIndex())));
-            }
+            private final Button btnEditar = UIFactory
+                    .crearBotonTablaEditar(() -> prepararEdicion(getTableView().getItems().get(getIndex())));
 
-            private final Button btnEliminar = new Button("Eliminar");
-            {
-                btnEliminar.setStyle(
-                        "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-cursor: hand; -fx-font-size: 11px;");
-                btnEliminar.setOnAction(e -> eliminarFabricante(getTableView().getItems().get(getIndex())));
-            }
+            private final Button btnEliminar = UIFactory
+                    .crearBotonTablaEliminar(() -> eliminarFabricante(getTableView().getItems().get(getIndex())));
 
             private final HBox container = new HBox(5, btnEditar, btnEliminar);
             {
@@ -192,7 +177,7 @@ public class FabricanteView {
     }
 
     /**
-     * Crea el panel del formulario para agregar/editar fabricantes
+     * Crea el panel con el formulario de registro/edición
      * 
      * @return
      */
@@ -230,24 +215,28 @@ public class FabricanteView {
         cmbTipoPersona.setStyle(AppTheme.STYLE_INPUT);
 
         inputsContainer.getChildren().addAll(
-                crearSeccion("Datos Personales"),
-                crearInputConLabel("Nombre / Razón *", txtNombre),
-                crearInputConLabel("Teléfono *", txtTelefono),
-                crearInputConLabel("Correo *", txtCorreo),
+                UIFactory.crearTituloSeccion("Datos Personales"),
+                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
+                UIFactory.crearGrupoInput("Correo *", txtCorreo),
 
-                crearSeccion("Dirección"),
-                crearInputConLabel("Calle *", txtCalle),
-                new HBox(10, crearInputConLabel("No. Ext *", txtNoExt), crearInputConLabel("No. Int", txtNoInt),
-                        crearInputConLabel("C.P. *", txtCp)),
-                crearInputConLabel("Colonia *", txtColonia),
-                crearInputConLabel("Ciudad *", txtCiudad),
-                crearInputConLabel("Municipio *", txtMunicipio),
-                new HBox(10, crearInputConLabel("Estado *", txtEstado), crearInputConLabel("País *", txtPais)),
+                UIFactory.crearTituloSeccion("Dirección"),
+                UIFactory.crearGrupoInput("Calle *", txtCalle),
+                new HBox(10,
+                        UIFactory.crearGrupoInput("No. Ext *", txtNoExt),
+                        UIFactory.crearGrupoInput("No. Int", txtNoInt),
+                        UIFactory.crearGrupoInput("C.P. *", txtCp)),
+                UIFactory.crearGrupoInput("Colonia *", txtColonia),
+                UIFactory.crearGrupoInput("Ciudad *", txtCiudad),
+                UIFactory.crearGrupoInput("Municipio *", txtMunicipio),
+                new HBox(10,
+                        UIFactory.crearGrupoInput("Estado *", txtEstado),
+                        UIFactory.crearGrupoInput("País *", txtPais)),
 
-                crearSeccion("Datos Fiscales"),
-                crearInputConLabel("Tipo Persona", cmbTipoPersona),
-                crearInputConLabel("RFC", txtRfc),
-                crearInputConLabel("CURP", txtCurp));
+                UIFactory.crearTituloSeccion("Datos Fiscales"),
+                UIFactory.crearGrupoInput("Tipo Persona", cmbTipoPersona),
+                UIFactory.crearGrupoInput("RFC", txtRfc),
+                UIFactory.crearGrupoInput("CURP", txtCurp));
 
         ScrollPane scrollPane = new ScrollPane(inputsContainer);
         scrollPane.setFitToWidth(true);
@@ -274,7 +263,7 @@ public class FabricanteView {
     }
 
     /**
-     * Registra un nuevo fabricante o actualiza uno existente
+     * Registra o actualiza un fabricante según el estado del formulario
      */
     private void registrarFabricante() {
         if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
@@ -285,12 +274,7 @@ public class FabricanteView {
             return;
         }
 
-        Fabricante f;
-        if (fabricanteEnEdicion != null) {
-            f = fabricanteEnEdicion;
-        } else {
-            f = new Fabricante();
-        }
+        Fabricante f = (fabricanteEnEdicion != null) ? fabricanteEnEdicion : new Fabricante();
 
         f.setNombreFabricante(txtNombre.getText().trim());
         f.setTelefonoFabricante(txtTelefono.getText().trim());
@@ -332,6 +316,64 @@ public class FabricanteView {
     }
 
     /**
+     * Elimina un fabricante
+     * 
+     * @param f
+     */
+    private void eliminarFabricante(Fabricante f) {
+        if (fabricanteEnEdicion != null && fabricanteEnEdicion.getIdFabricante().equals(f.getIdFabricante())) {
+            limpiarFormulario();
+        }
+
+        if (dialogService.mostrarConfirmacion("Eliminar Fabricante",
+                "¿Seguro que deseas eliminar a " + f.getNombreFabricante() + "?", stage)) {
+            if (fabricanteService.eliminarFabricante(f)) {
+                cargarFabricantes();
+                dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado",
+                        "Fabricante eliminado correctamente.", stage);
+            } else {
+                dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar el fabricante.",
+                        stage);
+            }
+        }
+    }
+
+    /**
+     * Carga los fabricantes en la tabla
+     */
+    private void cargarFabricantes() {
+        tablaFabricantes.getItems().setAll(fabricanteService.consultarFabricantes());
+    }
+
+    /**
+     * Limpia el formulario y resetea su estado
+     */
+    private void limpiarFormulario() {
+        this.fabricanteEnEdicion = null;
+        lblTituloFormulario.setText("Nuevo Fabricante");
+        btnGuardar.setText("Registrar Fabricante");
+        btnGuardar.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        txtNombre.clear();
+        txtTelefono.clear();
+        txtCorreo.clear();
+        txtCalle.clear();
+        txtNoExt.clear();
+        txtNoInt.clear();
+        txtCp.clear();
+        txtColonia.clear();
+        txtCiudad.clear();
+        txtMunicipio.clear();
+        txtEstado.clear();
+        txtPais.clear();
+        txtRfc.clear();
+        txtCurp.clear();
+        cmbTipoPersona.getSelectionModel().select(0);
+        lblMensaje.setText("");
+    }
+
+    /**
      * Prepara el formulario para editar un fabricante existente
      * 
      * @param f
@@ -358,81 +400,20 @@ public class FabricanteView {
         txtRfc.setText(f.getRfcFabricante() == null ? "" : f.getRfcFabricante());
         txtCurp.setText(f.getCurp() == null ? "" : f.getCurp());
 
-        if (f.isEsPersonaFisica()) {
+        if (f.isEsPersonaFisica())
             cmbTipoPersona.getSelectionModel().select("Persona Física");
-        } else {
+        else
             cmbTipoPersona.getSelectionModel().select("Persona Moral");
-        }
-    }
-
-    /**
-     * Elimina un fabricante después de la confirmación del usuario
-     * 
-     * @param f
-     */
-    private void eliminarFabricante(Fabricante f) {
-        if (fabricanteEnEdicion != null && fabricanteEnEdicion.getIdFabricante().equals(f.getIdFabricante())) {
-            limpiarFormulario();
-        }
-
-        if (dialogService.mostrarConfirmacion("Eliminar Fabricante",
-                "¿Seguro que deseas eliminar a " + f.getNombreFabricante() + "?", stage)) {
-            if (fabricanteService.eliminarFabricante(f)) {
-                cargarFabricantes();
-                dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado",
-                        "Fabricante eliminado correctamente.", stage);
-            } else {
-                dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar el fabricante.",
-                        stage);
-            }
-        }
-    }
-
-    /**
-     * Carga los fabricantes desde el servicio y los muestra en la tabla
-     */
-    private void cargarFabricantes() {
-        tablaFabricantes.getItems().setAll(fabricanteService.consultarFabricantes());
-    }
-
-    /**
-     * Limpia el formulario y resetea el estado de edición
-     */
-    private void limpiarFormulario() {
-        this.fabricanteEnEdicion = null;
-        lblTituloFormulario.setText("Nuevo Fabricante");
-
-        btnGuardar.setText("Registrar Fabricante");
-        btnGuardar.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY
-                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
-
-        txtNombre.clear();
-        txtTelefono.clear();
-        txtCorreo.clear();
-        txtCalle.clear();
-        txtNoExt.clear();
-        txtNoInt.clear();
-        txtCp.clear();
-        txtColonia.clear();
-        txtCiudad.clear();
-        txtMunicipio.clear();
-        txtEstado.clear();
-        txtPais.clear();
-        txtRfc.clear();
-        txtCurp.clear();
-        cmbTipoPersona.getSelectionModel().select(0);
-        lblMensaje.setText("");
     }
 
     /**
      * Muestra un diálogo con el detalle completo del fabricante
+     * 
      * @param f
      */
     private void mostrarDetalleFabricante(Fabricante f) {
         Stage dialog = new Stage();
-        dialog.initOwner(stage);
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.initStyle(StageStyle.TRANSPARENT);
+        UIFactory.configurarStageModal(dialog, stage);
 
         VBox root = new VBox(20);
         root.setPadding(new Insets(30));
@@ -450,22 +431,22 @@ public class FabricanteView {
         grid.setHgap(20);
         grid.setVgap(10);
 
-        agregarDatoGrid(grid, "Teléfono:", f.getTelefonoFabricante(), 0, 0);
-        agregarDatoGrid(grid, "Correo:", f.getCorreoFabricante(), 1, 0);
+        grid.add(UIFactory.crearDatoDetalle("Teléfono:", f.getTelefonoFabricante()), 0, 0);
+        grid.add(UIFactory.crearDatoDetalle("Correo:", f.getCorreoFabricante()), 1, 0);
 
         String direccion = String.format("%s #%d%s", f.getCalle(), f.getNoExtFabricante(),
                 (f.getNoIntFabricante() > 0 ? " Int " + f.getNoIntFabricante() : ""));
-        agregarDatoGrid(grid, "Dirección:", direccion, 0, 1);
-        agregarDatoGrid(grid, "Colonia/CP:", f.getColonia() + " C.P. " + f.getCpFabricante(), 1, 1);
+        grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
+        grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", f.getColonia() + " C.P. " + f.getCpFabricante()), 1, 1);
 
-        agregarDatoGrid(grid, "Ciudad/Mun:", f.getCiudad() + ", " + f.getMunicipio(), 0, 2);
-        agregarDatoGrid(grid, "Estado/País:", f.getEstado() + ", " + f.getPais(), 1, 2);
+        grid.add(UIFactory.crearDatoDetalle("Ciudad/Mun:", f.getCiudad() + ", " + f.getMunicipio()), 0, 2);
+        grid.add(UIFactory.crearDatoDetalle("Estado/País:", f.getEstado() + ", " + f.getPais()), 1, 2);
 
         if (f.getCurp() != null && !f.getCurp().isEmpty())
-            agregarDatoGrid(grid, "CURP:", f.getCurp(), 0, 3);
+            grid.add(UIFactory.crearDatoDetalle("CURP:", f.getCurp()), 0, 3);
 
         if (f.getRfcFabricante() != null && !f.getRfcFabricante().isEmpty())
-            agregarDatoGrid(grid, "RFC:", f.getRfcFabricante(), 1, 3);
+            grid.add(UIFactory.crearDatoDetalle("RFC:", f.getRfcFabricante()), 1, 3);
 
         Button btnCerrar = UIFactory.crearBotonSecundario("Cerrar");
         btnCerrar.setOnAction(e -> dialog.close());
@@ -474,58 +455,12 @@ public class FabricanteView {
         footer.setAlignment(Pos.CENTER_RIGHT);
 
         root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
-
         dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 
     /**
-     * Agrega un par de etiqueta-valor al grid del detalle
-     * @param grid
-     * @param label
-     * @param valor
-     * @param col
-     * @param row
-     */
-    private void agregarDatoGrid(GridPane grid, String label, String valor, int col, int row) {
-        Label l = new Label(label);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
-        Label v = new Label(valor != null ? valor : "-");
-        v.setStyle("-fx-text-fill: #4B5563; -fx-wrap-text: true;");
-        v.setMaxWidth(200);
-        VBox box = new VBox(2, l, v);
-        grid.add(box, col, row);
-    }
-
-    /**
-     * Crea un contenedor VBox con un label y un campo de entrada
-     * @param textoLabel
-     * @param campo
-     * @return
-     */
-    private VBox crearInputConLabel(String textoLabel, Node campo) {
-        Label l = new Label(textoLabel);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;");
-        if (textoLabel.contains("*"))
-            l.setTextFill(Color.web(AppTheme.COLOR_PRIMARY));
-        VBox v = new VBox(5, l, campo);
-        HBox.setHgrow(v, Priority.ALWAYS);
-        return v;
-    }
-
-    /**
-     * Crea un label de sección estilizado
-     * @param texto
-     * @return
-     */
-    private Label crearSeccion(String texto) {
-        Label l = new Label(texto);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY
-                + "; -fx-font-size: 14px; -fx-padding: 15 0 5 0;");
-        return l;
-    }
-
-    /**
      * Verifica si un TextField está vacío
+     * 
      * @param tf
      * @return
      */

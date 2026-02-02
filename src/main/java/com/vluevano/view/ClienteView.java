@@ -8,14 +8,10 @@ import com.vluevano.util.UIFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -39,17 +35,16 @@ public class ClienteView {
     private TextField txtNombre, txtRfc, txtTelefono, txtCorreo;
     private TextField txtCp, txtNoExt, txtNoInt, txtCalle, txtColonia, txtCiudad, txtMunicipio, txtEstado, txtPais;
     private TextField txtCurp;
-    
-    private ComboBox<String> cmbTipoPersona; 
-    
-    private Label lblMensaje;
+    private ComboBox<String> cmbTipoPersona;
 
+    private Label lblMensaje;
     private Cliente clienteEnEdicion = null;
     private Button btnGuardar;
     private Label lblTituloFormulario;
 
     /**
-     * Muestra la pantalla de gestión de clientes
+     * Muestra la vista de gestión de clientes
+     * 
      * @param stage
      * @param usuarioActual
      */
@@ -74,6 +69,7 @@ public class ClienteView {
 
     /**
      * Crea el contenido principal de la vista
+     * 
      * @return
      */
     private BorderPane crearContenido() {
@@ -100,7 +96,8 @@ public class ClienteView {
     }
 
     /**
-     * Crea el panel de la tabla de clientes
+     * Crea el panel de la tabla de clientes con barra de búsqueda
+     * 
      * @return
      */
     @SuppressWarnings("unchecked")
@@ -109,15 +106,16 @@ public class ClienteView {
 
         txtFiltro = UIFactory.crearInput("Nombre, RFC, Municipio...");
         txtFiltro.setPrefWidth(300);
-        txtFiltro.textProperty().addListener((obs, oldVal, newVal) -> 
-            tablaClientes.getItems().setAll(clienteService.buscarClientes(newVal)));
+        txtFiltro.textProperty().addListener(
+                (obs, oldVal, newVal) -> tablaClientes.getItems().setAll(clienteService.buscarClientes(newVal)));
 
         HBox topBar = new HBox(10, new Label("Buscar:"), txtFiltro);
         topBar.setAlignment(Pos.CENTER_LEFT);
 
         tablaClientes = new TableView<>();
         tablaClientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        tablaClientes.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+        tablaClientes.setStyle(
+                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
 
         TableColumn<Cliente, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdCliente())));
@@ -139,29 +137,24 @@ public class ClienteView {
         TableColumn<Cliente, String> colDireccion = new TableColumn<>("Dirección");
         colDireccion.setCellValueFactory(data -> {
             Cliente c = data.getValue();
-            return new SimpleStringProperty(String.format("%s #%d, %s, CP %d, %s, %s, %s",
-                    c.getCalle(), c.getNoExtCliente(), c.getColonia(), c.getCpCliente(),
-                    c.getCiudad(), c.getEstado(), c.getPais()));
+            return new SimpleStringProperty(
+                    String.format("%s #%d, %s", c.getCalle(), c.getNoExtCliente(), c.getColonia()));
         });
 
         TableColumn<Cliente, Void> colAcciones = new TableColumn<>("Acciones");
         colAcciones.setMinWidth(140);
         colAcciones.setMaxWidth(140);
         colAcciones.setCellFactory(param -> new TableCell<>() {
-            private final Button btnEditar = new Button("Editar");
-            {
-                btnEditar.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-cursor: hand; -fx-font-size: 11px; -fx-font-weight: bold;");
-                btnEditar.setOnAction(e -> prepararEdicion(getTableView().getItems().get(getIndex())));
-            }
+            private final Button btnEditar = UIFactory
+                    .crearBotonTablaEditar(() -> prepararEdicion(getTableView().getItems().get(getIndex())));
 
-            private final Button btnEliminar = new Button("Eliminar");
-            {
-                btnEliminar.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-cursor: hand; -fx-font-size: 11px;");
-                btnEliminar.setOnAction(e -> eliminarCliente(getTableView().getItems().get(getIndex())));
-            }
+            private final Button btnEliminar = UIFactory
+                    .crearBotonTablaEliminar(() -> eliminarCliente(getTableView().getItems().get(getIndex())));
 
             private final HBox container = new HBox(5, btnEditar, btnEliminar);
-            { container.setAlignment(Pos.CENTER); }
+            {
+                container.setAlignment(Pos.CENTER);
+            }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -184,7 +177,8 @@ public class ClienteView {
     }
 
     /**
-     * Crea el panel del formulario de cliente
+     * Crea el panel del formulario para agregar/editar clientes
+     * 
      * @return
      */
     private VBox crearPanelFormulario() {
@@ -192,7 +186,8 @@ public class ClienteView {
         card.setStyle(AppTheme.STYLE_CARD);
 
         lblTituloFormulario = new Label("Nuevo Cliente");
-        lblTituloFormulario.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #111827;");
+        lblTituloFormulario.setStyle(
+                "-fx-font-family: 'Segoe UI'; -fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #111827;");
         lblTituloFormulario.setPadding(new Insets(20));
 
         VBox inputsContainer = new VBox(10);
@@ -220,24 +215,28 @@ public class ClienteView {
         cmbTipoPersona.setStyle(AppTheme.STYLE_INPUT);
 
         inputsContainer.getChildren().addAll(
-                crearSeccion("Datos Personales"),
-                crearInputConLabel("Nombre / Razón *", txtNombre),
-                crearInputConLabel("Teléfono *", txtTelefono),
-                crearInputConLabel("Correo *", txtCorreo),
-                
-                crearSeccion("Dirección"),
-                crearInputConLabel("Calle *", txtCalle),
-                new HBox(10, crearInputConLabel("No. Ext *", txtNoExt), crearInputConLabel("No. Int", txtNoInt), crearInputConLabel("C.P. *", txtCp)),
-                crearInputConLabel("Colonia *", txtColonia),
-                crearInputConLabel("Ciudad *", txtCiudad),
-                crearInputConLabel("Municipio *", txtMunicipio),
-                new HBox(10, crearInputConLabel("Estado *", txtEstado), crearInputConLabel("País *", txtPais)),
-                
-                crearSeccion("Datos Fiscales"),
-                crearInputConLabel("Tipo Persona", cmbTipoPersona),
-                crearInputConLabel("RFC", txtRfc),
-                crearInputConLabel("CURP", txtCurp)
-        );
+                UIFactory.crearTituloSeccion("Datos Personales"),
+                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
+                UIFactory.crearGrupoInput("Correo *", txtCorreo),
+
+                UIFactory.crearTituloSeccion("Dirección"),
+                UIFactory.crearGrupoInput("Calle *", txtCalle),
+                new HBox(10,
+                        UIFactory.crearGrupoInput("No. Ext *", txtNoExt),
+                        UIFactory.crearGrupoInput("No. Int", txtNoInt),
+                        UIFactory.crearGrupoInput("C.P. *", txtCp)),
+                UIFactory.crearGrupoInput("Colonia *", txtColonia),
+                UIFactory.crearGrupoInput("Ciudad *", txtCiudad),
+                UIFactory.crearGrupoInput("Municipio *", txtMunicipio),
+                new HBox(10,
+                        UIFactory.crearGrupoInput("Estado *", txtEstado),
+                        UIFactory.crearGrupoInput("País *", txtPais)),
+
+                UIFactory.crearTituloSeccion("Datos Fiscales"),
+                UIFactory.crearGrupoInput("Tipo Persona", cmbTipoPersona),
+                UIFactory.crearGrupoInput("RFC", txtRfc),
+                UIFactory.crearGrupoInput("CURP", txtCurp));
 
         ScrollPane scrollPane = new ScrollPane(inputsContainer);
         scrollPane.setFitToWidth(true);
@@ -264,7 +263,7 @@ public class ClienteView {
     }
 
     /**
-     * Registra o actualiza un cliente
+     * Registra o actualiza un cliente según el estado del formulario
      */
     private void registrarCliente() {
         if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
@@ -275,15 +274,10 @@ public class ClienteView {
             return;
         }
 
-        Cliente cliente;
-        if (clienteEnEdicion != null) {
-            cliente = clienteEnEdicion;
-        } else {
-            cliente = new Cliente();
-        }
+        Cliente cliente = (clienteEnEdicion != null) ? clienteEnEdicion : new Cliente();
 
         cliente.setNombreCliente(txtNombre.getText().trim());
-        cliente.setNombreFiscal(txtNombre.getText().trim()); 
+        cliente.setNombreFiscal(txtNombre.getText().trim());
         cliente.setTelefonoCliente(txtTelefono.getText().trim());
         cliente.setCorreoCliente(txtCorreo.getText().trim());
         cliente.setRfcCliente(esVacio(txtRfc) ? null : txtRfc.getText().trim());
@@ -313,7 +307,8 @@ public class ClienteView {
 
         if (res.toLowerCase().contains("exitosamente") || res.toLowerCase().contains("guardado")) {
             String accion = (clienteEnEdicion != null) ? "actualizado" : "guardado";
-            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Cliente " + accion + " correctamente.", stage);
+            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Cliente " + accion + " correctamente.",
+                    stage);
             limpiarFormulario();
             cargarClientes();
         } else {
@@ -322,14 +317,16 @@ public class ClienteView {
     }
 
     /**
-     * Prepara el formulario para editar un cliente
+     * Prepara el formulario para editar un cliente existente
+     * 
      * @param cliente
      */
     private void prepararEdicion(Cliente cliente) {
         this.clienteEnEdicion = cliente;
         lblTituloFormulario.setText("Editar Cliente (ID: " + cliente.getIdCliente() + ")");
         btnGuardar.setText("Actualizar Cliente");
-        btnGuardar.setStyle("-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+        btnGuardar.setStyle(
+                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
 
         txtNombre.setText(cliente.getNombreCliente());
         txtTelefono.setText(cliente.getTelefonoCliente());
@@ -354,7 +351,8 @@ public class ClienteView {
     }
 
     /**
-     * Elimina un cliente
+     * Elimina un cliente después de la confirmación del usuario
+     * 
      * @param c
      */
     private void eliminarCliente(Cliente c) {
@@ -366,7 +364,8 @@ public class ClienteView {
                 "¿Seguro que deseas eliminar a " + c.getNombreCliente() + "?", stage)) {
             if (clienteService.eliminarCliente(c)) {
                 cargarClientes();
-                dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado", "Cliente eliminado correctamente.", stage);
+                dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Eliminado",
+                        "Cliente eliminado correctamente.", stage);
             } else {
                 dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar el cliente.", stage);
             }
@@ -374,14 +373,14 @@ public class ClienteView {
     }
 
     /**
-     * Carga los clientes en la tabla
+     * Carga la lista de clientes en la tabla.
      */
     private void cargarClientes() {
         tablaClientes.getItems().setAll(clienteService.consultarClientes());
     }
 
     /**
-     * Limpia el formulario de cliente
+     * Limpia el formulario y restablece su estado inicial
      */
     private void limpiarFormulario() {
         this.clienteEnEdicion = null;
@@ -410,14 +409,14 @@ public class ClienteView {
     }
 
     /**
-     * Muestra el detalle de un cliente
+     * Muestra un diálogo con el detalle completo de un cliente
+     * 
      * @param c
      */
     private void mostrarDetalleCliente(Cliente c) {
         Stage dialog = new Stage();
-        dialog.initOwner(stage);
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.initStyle(StageStyle.TRANSPARENT);
+
+        UIFactory.configurarStageModal(dialog, stage);
 
         VBox root = new VBox(20);
         root.setPadding(new Insets(30));
@@ -426,7 +425,8 @@ public class ClienteView {
         root.setMaxWidth(500);
 
         Label lblTitulo = new Label(c.getNombreCliente());
-        lblTitulo.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+        lblTitulo
+                .setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
         Label lblSub = new Label(c.isEsPersonaFisica() ? "Persona Física" : "Persona Moral");
         lblSub.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 14px;");
 
@@ -434,22 +434,22 @@ public class ClienteView {
         grid.setHgap(20);
         grid.setVgap(10);
 
-        agregarDatoGrid(grid, "Teléfono:", c.getTelefonoCliente(), 0, 0);
-        agregarDatoGrid(grid, "Correo:", c.getCorreoCliente(), 1, 0);
+        grid.add(UIFactory.crearDatoDetalle("Teléfono:", c.getTelefonoCliente()), 0, 0);
+        grid.add(UIFactory.crearDatoDetalle("Correo:", c.getCorreoCliente()), 1, 0);
 
         String direccion = String.format("%s #%d%s", c.getCalle(), c.getNoExtCliente(),
                 (c.getNoIntCliente() > 0 ? " Int " + c.getNoIntCliente() : ""));
-        agregarDatoGrid(grid, "Dirección:", direccion, 0, 1);
-        agregarDatoGrid(grid, "Colonia/CP:", c.getColonia() + " C.P. " + c.getCpCliente(), 1, 1);
+        grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
+        grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", c.getColonia() + " C.P. " + c.getCpCliente()), 1, 1);
 
-        agregarDatoGrid(grid, "Ciudad/Mun:", c.getCiudad() + ", " + c.getMunicipio(), 0, 2);
-        agregarDatoGrid(grid, "Estado/País:", c.getEstado() + ", " + c.getPais(), 1, 2);
+        grid.add(UIFactory.crearDatoDetalle("Ciudad/Mun:", c.getCiudad() + ", " + c.getMunicipio()), 0, 2);
+        grid.add(UIFactory.crearDatoDetalle("Estado/País:", c.getEstado() + ", " + c.getPais()), 1, 2);
 
         if (c.getCurp() != null && !c.getCurp().isEmpty())
-            agregarDatoGrid(grid, "CURP:", c.getCurp(), 0, 3);
+            grid.add(UIFactory.crearDatoDetalle("CURP:", c.getCurp()), 0, 3);
 
         if (c.getRfcCliente() != null && !c.getRfcCliente().isEmpty())
-            agregarDatoGrid(grid, "RFC:", c.getRfcCliente(), 1, 3);
+            grid.add(UIFactory.crearDatoDetalle("RFC:", c.getRfcCliente()), 1, 3);
 
         Button btnCerrar = UIFactory.crearBotonSecundario("Cerrar");
         btnCerrar.setOnAction(e -> dialog.close());
@@ -463,53 +463,8 @@ public class ClienteView {
     }
 
     /**
-     * Agrega un dato al grid de detalle
-     * @param grid
-     * @param label
-     * @param valor
-     * @param col
-     * @param row
-     */
-    private void agregarDatoGrid(GridPane grid, String label, String valor, int col, int row) {
-        Label l = new Label(label);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
-        Label v = new Label(valor != null ? valor : "-");
-        v.setStyle("-fx-text-fill: #4B5563; -fx-wrap-text: true;");
-        v.setMaxWidth(200);
-        VBox box = new VBox(2, l, v);
-        grid.add(box, col, row);
-    }
-
-    /**
-     * Crea un input con su label
-     * @param textoLabel
-     * @param campo
-     * @return
-     */
-    private VBox crearInputConLabel(String textoLabel, Node campo) {
-        Label l = new Label(textoLabel);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;");
-        if (textoLabel.contains("*"))
-            l.setTextFill(Color.web(AppTheme.COLOR_PRIMARY));
-        VBox v = new VBox(5, l, campo);
-        HBox.setHgrow(v, Priority.ALWAYS);
-        return v;
-    }
-
-    /**
-     * Crea una sección con estilo
-     * @param texto
-     * @return
-     */
-    private Label crearSeccion(String texto) {
-        Label l = new Label(texto);
-        l.setStyle("-fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY
-                + "; -fx-font-size: 14px; -fx-padding: 15 0 5 0;");
-        return l;
-    }
-
-    /**
      * Verifica si un TextField está vacío
+     * 
      * @param tf
      * @return
      */
