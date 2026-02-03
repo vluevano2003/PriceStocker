@@ -49,6 +49,10 @@ public class MenuPrincipalScreen {
     @Lazy
     private EmpresaView empresaView;
 
+    @Autowired
+    @Lazy
+    private PrestadorServicioView prestadorServicioView;
+
     private Stage stage;
     private BorderPane rootLayout;
     private String usuarioActual;
@@ -209,7 +213,7 @@ public class MenuPrincipalScreen {
         sidebar.getChildren().add(crearBotonMenu("Fabricantes", () -> fabricanteView.show(stage, usuarioActual)));
         sidebar.getChildren().add(crearBotonMenu("Empresas Mercado", () -> empresaView.show(stage, usuarioActual)));
         sidebar.getChildren()
-                .add(crearBotonMenu("Prestadores Servicio", () -> System.out.println("Navegar a Prestadores")));
+                .add(crearBotonMenu("Prestadores Servicio", () -> prestadorServicioView.show(stage, usuarioActual)));
 
         // ADMIN
         if (usuarioService.tienePermiso(usuarioActual)) {
