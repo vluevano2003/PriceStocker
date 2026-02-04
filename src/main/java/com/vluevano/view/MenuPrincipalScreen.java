@@ -53,6 +53,10 @@ public class MenuPrincipalScreen {
     @Lazy
     private PrestadorServicioView prestadorServicioView;
 
+    @Autowired
+    @Lazy
+    private ProductoView productoView;
+
     private Stage stage;
     private BorderPane rootLayout;
     private String usuarioActual;
@@ -199,7 +203,7 @@ public class MenuPrincipalScreen {
         sidebar.getChildren().add(crearTituloSeccion("OPERACIONES"));
 
         sidebar.getChildren().add(crearBotonMenu("Gestión de Productos", () -> {
-            System.out.println("Navegar a Productos");
+            productoView.show(stage, usuarioActual);
         }));
 
         Region spacer1 = new Region();

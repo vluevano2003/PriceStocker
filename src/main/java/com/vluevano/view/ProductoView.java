@@ -1,592 +1,772 @@
-/*package com.vluevano.view;
+package com.vluevano.view;
 
-import javafx.application.Application;
+import com.vluevano.model.*;
+import com.vluevano.service.DialogService;
+import com.vluevano.service.ProductoService;
+import com.vluevano.util.AppTheme;
+import com.vluevano.util.UIFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.vluevano.controller.ProductoController;
-import com.vluevano.model.Categoria;
-import com.vluevano.model.Cliente;
-import com.vluevano.model.Empresa;
-import com.vluevano.model.Fabricante;
-import com.vluevano.model.Producto;
-import com.vluevano.model.Proveedor;
-import com.vluevano.model.Servicio;
+@Component
+public class ProductoView {
 
-public class ProductoView extends Application {
-    private final ProductoController productoController = new ProductoController();
+    @Autowired private ProductoService productoService;
+    @Autowired private DialogService dialogService;
+    @Autowired @Lazy private MenuPrincipalScreen menuPrincipalScreen;
+
+    private Stage stage;
     private String usuarioActual;
-    private VBox formularioRegistro;
-    private VBox consultaProductos;
-    private TableView<Producto> productoTable;
-    private VBox root;
+    private TableView<Producto> tablaProductos;
+    private TextField txtFiltro;
 
-    public ProductoView(String usuarioActual) {
+    // Campos del formulario
+    private TextField txtNombre, txtFicha, txtAlterno, txtExistencia;
+    private Label lblTituloFormulario;
+    private Button btnGuardar;
+    private Producto productoEnEdicion = null;
+
+    // Listas observables (Binding con la UI)
+    private ObservableList<Categoria> categoriasSeleccionadas = FXCollections.observableArrayList();
+    private ObservableList<ProductoProveedor> proveedoresAgregados = FXCollections.observableArrayList();
+    private ObservableList<ProductoCliente> clientesAgregados = FXCollections.observableArrayList();
+    private ObservableList<ProductoFabricante> fabricantesAgregados = FXCollections.observableArrayList();
+    private ObservableList<ProductoEmpresa> empresasAgregadas = FXCollections.observableArrayList();
+    private ObservableList<Servicio> serviciosSeleccionados = FXCollections.observableArrayList();
+
+    // Cache de vistas para los "Tabs"
+    private VBox viewGeneral, viewProveedores, viewClientes, viewFabricantes, viewEmpresas, viewServicios;
+    private BorderPane contentPanel;
+    private Map<String, Button> navButtons;
+
+    public void show(Stage stage, String usuarioActual) {
+        this.stage = stage;
         this.usuarioActual = usuarioActual;
+
+        BorderPane root = crearContenido();
+
+        if (stage.getScene() != null) {
+            stage.getScene().setRoot(root);
+        } else {
+            Scene scene = new Scene(root, 1280, 850);
+            stage.setScene(scene);
+            stage.centerOnScreen();
+        }
+        
+        stage.setTitle("PriceStocker | Gestión de Productos");
+        stage.show();
+        cargarProductos();
     }
 
-    public static void main(String[] args) {
-        launch(args);
-    }
+    private BorderPane crearContenido() {
+        BorderPane root = new BorderPane();
+        root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
-    @Override
-    public void start(Stage primaryStage) throws IOException, SQLException {
-        primaryStage.setTitle("Gestión de Productos");
+        root.setTop(UIFactory.crearHeader("Gestión de Productos", 
+                () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
-        MenuBar menuBar = new MenuBar();
-        Menu menuVista = new Menu("Opciones");
-        MenuItem registrarItem = new MenuItem("Registrar producto");
-        MenuItem consultarItem = new MenuItem("Consultar productos");
-        MenuItem salirItem = new MenuItem("Salir");
+        HBox contenidoCentral = new HBox(30);
+        contenidoCentral.setPadding(new Insets(30));
 
-        registrarItem.setOnAction(e -> mostrarFormularioRegistro());
-        consultarItem.setOnAction(e -> {
-            try {
-                mostrarConsultaProductos();
-            } catch (SQLException e1) {
-                e1.printStackTrace();
-            }
-        });
-        salirItem.setOnAction(e -> mostrarMenuPrincipal(primaryStage));
+        // Panel de Tabla (Izquierda)
+        VBox panelTabla = crearPanelTabla();
+        HBox.setHgrow(panelTabla, Priority.ALWAYS);
 
-        menuVista.getItems().addAll(registrarItem, consultarItem, salirItem);
-        menuBar.getMenus().add(menuVista);
+        // Panel de Formulario (Derecha)
+        VBox panelFormulario = crearPanelFormulario();
+        panelFormulario.setMinWidth(550); // Un poco más ancho para acomodar mejor los botones
+        panelFormulario.setMaxWidth(550);
 
-        formularioRegistro = crearFormularioRegistro();
-        consultaProductos = crearConsultaProductos();
+        contenidoCentral.getChildren().addAll(panelTabla, panelFormulario);
+        root.setCenter(contenidoCentral);
 
-        root = new VBox(10, menuBar, consultaProductos);
-        root.setPadding(new Insets(10));
-        Scene scene = new Scene(root, 900, 600);
-        primaryStage.setScene(scene);
-        primaryStage.show();
-    }
-
-    private VBox crearFormularioRegistro() throws IOException {
-        VBox layout = new VBox(10);
-        layout.setPadding(new Insets(20));
-
-        Label titulo = new Label("Registrar Producto");
-        titulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-
-        TextField nombreField = new TextField();
-        nombreField.setStyle("-fx-margin: 5px;");
-
-        TextField fichaField = new TextField();
-        fichaField.setStyle("-fx-margin: 5px;");
-
-        TextField alternoField = new TextField();
-        alternoField.setStyle("-fx-margin: 5px;");
-
-        TextField existenciaField = new TextField();
-        existenciaField.setStyle("-fx-margin: 5px;");
-
-        ComboBox<String> monedaCombo = new ComboBox<>();
-        monedaCombo.getItems().addAll("USD", "MXN");
-        monedaCombo.setStyle("-fx-margin: 5px;");
-
-        List<ComboBox<Categoria>> categoriaList = new ArrayList<>();
-        List<ComboBox<Empresa>> empresaList = new ArrayList<>();
-        List<TextField> precioEmpresaList = new ArrayList<>();
-        List<ComboBox<Proveedor>> proveedorList = new ArrayList<>();
-        List<TextField> precioProveedorList = new ArrayList<>();
-        List<ComboBox<Fabricante>> fabricanteList = new ArrayList<>();
-        List<TextField> precioFabricanteList = new ArrayList<>();
-        List<ComboBox<Cliente>> clienteList = new ArrayList<>();
-        List<TextField> precioClienteList = new ArrayList<>();
-        List<ComboBox<Servicio>> servicios = new ArrayList<>();
-
-        categoriaList.add(new ComboBox<>(FXCollections.observableList(productoController.obtenerCategorias())));
-        empresaList.add(new ComboBox<>(FXCollections.observableList(productoController.obtenerEmpresas())));
-        proveedorList.add(new ComboBox<>(FXCollections.observableList(productoController.obtenerProveedores())));
-        fabricanteList.add(new ComboBox<>(FXCollections.observableList(productoController.obtenerFabricantes())));
-        clienteList.add(new ComboBox<>(FXCollections.observableList(productoController.obtenerClientes())));
-        servicios.add(new ComboBox<>(FXCollections.observableList(productoController.obtenerServicios())));
-
-        // Botones con colores
-        Button agregarCategoriaBtn = new Button("Agregar Categoría");
-        agregarCategoriaBtn.setId("agregarCategoriaBtn");
-        agregarCategoriaBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;"); // Verde
-        agregarCategoriaBtn.setOnAction(e -> {
-            try {
-                ComboBox<Categoria> categoriaCombo = new ComboBox<>(
-                        FXCollections.observableList(productoController.obtenerCategorias()));
-                categoriaList.add(categoriaCombo);
-                layout.getChildren().addAll(new Separator(), new Label("Categoría:"), categoriaCombo);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        Button agregarEmpresaBtn = new Button("Agregar Empresa");
-        agregarEmpresaBtn.setId("agregarEmpresaBtn");
-        agregarEmpresaBtn.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;"); // Azul
-        agregarEmpresaBtn.setOnAction(e -> {
-            try {
-                ComboBox<Empresa> empresaCombo = new ComboBox<>(
-                        FXCollections.observableList(productoController.obtenerEmpresas()));
-                TextField precioEmpresa = new TextField();
-                empresaList.add(empresaCombo);
-                precioEmpresaList.add(precioEmpresa);
-                layout.getChildren().addAll(new Separator(), new Label("Empresa:"), empresaCombo,
-                        new Label("Precio Empresa:"), precioEmpresa);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        Button agregarProveedorBtn = new Button("Agregar Proveedor");
-        agregarProveedorBtn.setId("agregarProveedorBtn");
-        agregarProveedorBtn.setStyle("-fx-background-color: #FF5722; -fx-text-fill: white;"); // Naranja
-        agregarProveedorBtn.setOnAction(e -> {
-            try {
-                ComboBox<Proveedor> proveedorCombo = new ComboBox<>(
-                        FXCollections.observableList(productoController.obtenerProveedores()));
-                TextField precioProveedor = new TextField();
-                proveedorList.add(proveedorCombo);
-                precioProveedorList.add(precioProveedor);
-                layout.getChildren().addAll(new Separator(), new Label("Proveedor:"), proveedorCombo,
-                        new Label("Precio Proveedor:"), precioProveedor);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        Button agregarFabricanteBtn = new Button("Agregar Fabricante");
-        agregarFabricanteBtn.setId("agregarFabricanteBtn");
-        agregarFabricanteBtn.setStyle("-fx-background-color: #FFC107; -fx-text-fill: white;"); // Amarillo
-        agregarFabricanteBtn.setOnAction(e -> {
-            try {
-                ComboBox<Fabricante> fabricanteCombo = new ComboBox<>(
-                        FXCollections.observableList(productoController.obtenerFabricantes()));
-                TextField precioFabricante = new TextField();
-                fabricanteList.add(fabricanteCombo);
-                precioFabricanteList.add(precioFabricante);
-                layout.getChildren().addAll(new Separator(), new Label("Fabricante:"), fabricanteCombo,
-                        new Label("Precio Fabricante:"), precioFabricante);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        Button agregarClienteBtn = new Button("Agregar Cliente");
-        agregarClienteBtn.setId("agregarClienteBtn");
-        agregarClienteBtn.setStyle("-fx-background-color: #673AB7; -fx-text-fill: white;"); // Púrpura
-        agregarClienteBtn.setOnAction(e -> {
-            try {
-                ComboBox<Cliente> clienteCombo = new ComboBox<>(
-                        FXCollections.observableList(productoController.obtenerClientes()));
-                TextField precioCliente = new TextField();
-                clienteList.add(clienteCombo);
-                precioClienteList.add(precioCliente);
-                layout.getChildren().addAll(new Separator(), new Label("Cliente:"), clienteCombo,
-                        new Label("Precio Cliente:"), precioCliente);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        Button agregarServicioBtn = new Button("Agregar Servicio");
-        agregarServicioBtn.setId("agregarServicioBtn");
-        agregarServicioBtn.setStyle("-fx-background-color: #9C27B0; -fx-text-fill: white;"); // Violeta
-        agregarServicioBtn.setOnAction(e -> {
-            try {
-                ComboBox<Servicio> servicioCombo = new ComboBox<>(
-                        FXCollections.observableList(productoController.obtenerServicios()));
-                servicios.add(servicioCombo);
-                layout.getChildren().addAll(new Separator(), new Label("Servicio:"), servicioCombo);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        Button registrarBtn = new Button("Registrar");
-        registrarBtn.setId("registrarBtn");
-        registrarBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;"); // Verde
-        registrarBtn.setOnAction(e -> {
-            try {
-                // Validar campos de texto
-                if (nombreField.getText().isEmpty() || fichaField.getText().isEmpty()
-                        || alternoField.getText().isEmpty() || existenciaField.getText().isEmpty()) {
-                    showAlert("Error", "Todos los campos son obligatorios.", Alert.AlertType.ERROR);
-                    return; // Salir si algún campo está vacío
-                }
-
-                // Validar existencia (debe ser un número entero)
-                int existencia;
-                try {
-                    existencia = Integer.parseInt(existenciaField.getText());
-                } catch (NumberFormatException ex) {
-                    showAlert("Error", "La existencia debe ser un número entero.", Alert.AlertType.ERROR);
-                    return;
-                }
-
-                // Validar que al menos una categoría sea seleccionada
-                if (categoriaList.stream().allMatch(c -> c.getValue() == null)) {
-                    showAlert("Error", "Debe seleccionar al menos una categoría.", Alert.AlertType.ERROR);
-                    return;
-                }
-
-                // Validar que se haya seleccionado una moneda
-                if (monedaCombo.getValue() == null) {
-                    showAlert("Error", "Debe seleccionar una moneda.", Alert.AlertType.ERROR);
-                    return;
-                }
-
-                // Crear el producto con los datos validados
-                Producto nuevoProducto = new Producto(0, nombreField.getText(), fichaField.getText(),
-                        alternoField.getText(), existencia);
-
-                // Recoger las listas seleccionadas
-                List<Categoria> categoriasSeleccionadas = categoriaList.stream().map(ComboBox::getValue)
-                        .collect(Collectors.toList());
-                List<Empresa> empresasSeleccionadas = empresaList.stream().map(ComboBox::getValue)
-                        .filter(Objects::nonNull).collect(Collectors.toList());
-
-                List<Double> preciosEmpresas = precioEmpresaList.stream().map(tf -> Double.parseDouble(tf.getText()))
-                        .collect(Collectors.toList());
-
-                List<Proveedor> proveedoresSeleccionados = proveedorList.stream().map(ComboBox::getValue)
-                        .filter(Objects::nonNull).collect(Collectors.toList());
-                List<Double> preciosProveedores = precioProveedorList.stream()
-                        .map(tf -> Double.parseDouble(tf.getText())).collect(Collectors.toList());
-
-                List<Fabricante> fabricantesSeleccionados = fabricanteList.stream().map(ComboBox::getValue)
-                        .filter(Objects::nonNull).collect(Collectors.toList());
-                List<Double> preciosFabricantes = precioFabricanteList.stream()
-                        .map(tf -> Double.parseDouble(tf.getText())).collect(Collectors.toList());
-
-                List<Cliente> clientesSeleccionados = clienteList.stream().map(ComboBox::getValue)
-                        .filter(Objects::nonNull).collect(Collectors.toList());
-                List<Double> preciosClientes = precioClienteList.stream().map(tf -> Double.parseDouble(tf.getText()))
-                        .collect(Collectors.toList());
-
-                List<Servicio> serviciosSeleccionados = servicios.stream().map(ComboBox::getValue)
-                        .filter(Objects::nonNull).collect(Collectors.toList());
-
-                String moneda = monedaCombo.getValue();
-
-                // Registrar el producto en el controlador
-                productoController.registrarProducto(nuevoProducto, categoriasSeleccionadas, empresasSeleccionadas,
-                        proveedoresSeleccionados, fabricantesSeleccionados, clientesSeleccionados,
-                        serviciosSeleccionados, preciosEmpresas, preciosProveedores, preciosFabricantes,
-                        preciosClientes, moneda);
-
-                // Mensaje de éxito
-                showAlert("Éxito", "Producto registrado correctamente", Alert.AlertType.INFORMATION);
-
-                // Limpiar el formulario y crear uno nuevo
-                layout.getChildren().clear();
-                VBox nuevoFormulario = crearFormularioRegistro();
-                nuevoFormulario.setPadding(new Insets(-21));
-                layout.getChildren().add(nuevoFormulario);
-
-            } catch (Exception ex) {
-                showAlert("Error", "Error al registrar el producto", Alert.AlertType.ERROR);
-                System.out.println(ex.getMessage());
-            }
-        });
-
-        Button cargarExcelBtn = new Button("Cargar desde Excel");
-        cargarExcelBtn.setId("cargarExcelBtn");
-        cargarExcelBtn.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white;"); // Naranja
-        cargarExcelBtn.setOnAction(e -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.getExtensionFilters()
-                    .add(new FileChooser.ExtensionFilter("Excel Files", "*.xls", "*.xlsx"));
-            File selectedFile = fileChooser.showOpenDialog(layout.getScene().getWindow());
-
-            if (selectedFile != null) {
-                productoController.registrarProductosDesdeExcel(selectedFile);
-            }
-        });
-
-        HBox botonera = new HBox(10);
-        botonera.getChildren().addAll(agregarCategoriaBtn, agregarEmpresaBtn, agregarProveedorBtn, agregarFabricanteBtn,
-                agregarClienteBtn, agregarServicioBtn);
-        botonera.setStyle("-fx-alignment: center;");
-
-        layout.getChildren().addAll(titulo, new Label("Nombre:"), nombreField, new Label("Ficha:"), fichaField,
-                new Label("Alterno:"), alternoField, new Label("Existencia:"), existenciaField, new Label("Moneda:"),
-                monedaCombo, new Label("Categoría:"), categoriaList.get(0), botonera, registrarBtn, cargarExcelBtn);
-
-        ScrollPane scrollPane = new ScrollPane(layout);
-        scrollPane.setFitToWidth(true);
-        return new VBox(scrollPane);
+        return root;
     }
 
     @SuppressWarnings("unchecked")
-    private VBox crearConsultaProductos() throws SQLException {
-        VBox layout = new VBox(10);
-        layout.setPadding(new Insets(20));
-        layout.setStyle("-fx-border-color: black; -fx-border-width: 1px; -fx-border-radius: 5px;");
+    private VBox crearPanelTabla() {
+        VBox box = new VBox(15);
 
-        // Crear el campo de texto para el filtro
-        TextField filtroField = new TextField();
-        filtroField.setPromptText(
-                "Filtrar por ID, nombre, ficha, alterno, categoría, proveedor, empresa, fabricante, cliente, prestador de servicio");
+        txtFiltro = UIFactory.crearInput("Buscar por nombre, código...");
+        txtFiltro.setPrefWidth(300);
+        txtFiltro.textProperty().addListener((obs, oldVal, newVal) -> 
+            tablaProductos.getItems().setAll(productoService.buscarProductos(newVal)));
 
-        // Crear la tabla de productos
-        productoTable = new TableView<>();
+        HBox topBar = new HBox(10, new Label("Buscar:"), txtFiltro);
+        topBar.setAlignment(Pos.CENTER_LEFT);
 
-        // Definir las columnas
-        TableColumn<Producto, Integer> idColumn = new TableColumn<>("ID");
-        TableColumn<Producto, String> nombreColumn = new TableColumn<>("Nombre");
-        TableColumn<Producto, String> fichaColumn = new TableColumn<>("Ficha");
-        TableColumn<Producto, String> alternoColumn = new TableColumn<>("Alterno");
-        TableColumn<Producto, Integer> existenciaColumn = new TableColumn<>("Existencia");
-        TableColumn<Producto, String> categoriasColumn = new TableColumn<>("Categorías");
-        TableColumn<Producto, String> proveedoresColumn = new TableColumn<>("Proveedores");
-        TableColumn<Producto, String> empresasColumn = new TableColumn<>("Empresas");
-        TableColumn<Producto, String> clientesColumn = new TableColumn<>("Clientes");
-        TableColumn<Producto, String> fabricantesColumn = new TableColumn<>("Fabricantes");
-        TableColumn<Producto, String> serviciosColumn = new TableColumn<>("Servicios");
+        tablaProductos = new TableView<>();
+        tablaProductos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tablaProductos.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
 
-        // Establecer las celdas de las columnas
-        idColumn.setCellValueFactory(cellData -> cellData.getValue().idProductoProperty().asObject());
-        nombreColumn.setCellValueFactory(cellData -> cellData.getValue().nombreProductoProperty());
-        fichaColumn.setCellValueFactory(cellData -> cellData.getValue().fichaProductoProperty());
-        alternoColumn.setCellValueFactory(cellData -> cellData.getValue().alternoProductoProperty());
-        existenciaColumn.setCellValueFactory(cellData -> cellData.getValue().existenciaProductoProperty().asObject());
+        TableColumn<Producto, String> colNombre = new TableColumn<>("Producto");
+        colNombre.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getNombreProducto()));
+        
+        TableColumn<Producto, String> colExistencia = new TableColumn<>("Exist.");
+        colExistencia.setCellValueFactory(d -> new SimpleStringProperty(String.valueOf(d.getValue().getExistenciaProducto())));
+        colExistencia.setMaxWidth(60);
+        colExistencia.setMinWidth(60);
+        colExistencia.setStyle("-fx-alignment: CENTER;");
 
-        // Columnas adicionales para mostrar los datos relacionados
-        categoriasColumn
-                .setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getCategoriasString()));
-        proveedoresColumn
-                .setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getProveedoresString()));
-        empresasColumn
-                .setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getEmpresasString()));
-        clientesColumn
-                .setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getClientesString()));
-        fabricantesColumn
-                .setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getFabricantesString()));
-        serviciosColumn
-                .setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getServiciosString()));
-
-        // Agregar todas las columnas a la tabla
-        productoTable.getColumns().addAll(idColumn, nombreColumn, fichaColumn, alternoColumn, existenciaColumn,
-                categoriasColumn, proveedoresColumn, empresasColumn, clientesColumn,
-                fabricantesColumn, serviciosColumn);
-
-        // Cargar los productos inicialmente
-        cargarProductos();
-
-        // Filtrar productos cuando se escribe en el campo de texto
-        filtroField.textProperty().addListener((observable, oldValue, newValue) -> {
-            try {
-                productoTable.getItems().setAll(productoController.filtrarProductos(newValue));
-            } catch (IOException e) {
-                e.printStackTrace();
+        TableColumn<Producto, Void> colAcciones = new TableColumn<>("Acciones");
+        colAcciones.setMinWidth(140);
+        colAcciones.setMaxWidth(140);
+        colAcciones.setCellFactory(param -> new TableCell<>() {
+            private final Button btnEditar = UIFactory.crearBotonTablaEditar(() -> prepararEdicion(getTableView().getItems().get(getIndex())));
+            private final Button btnEliminar = UIFactory.crearBotonTablaEliminar(() -> eliminarProducto(getTableView().getItems().get(getIndex())));
+            private final HBox pane = new HBox(5, btnEditar, btnEliminar);
+            { pane.setAlignment(Pos.CENTER); }
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : pane);
             }
         });
 
-        productoTable.setRowFactory(tv -> {
-            TableRow<Producto> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    Producto productoSeleccionado = row.getItem();
-                    try {
-                        abrirVentanaEdicion(productoSeleccionado);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-            return row;
+        tablaProductos.getColumns().addAll(colNombre, colExistencia, colAcciones);
+        VBox.setVgrow(tablaProductos, Priority.ALWAYS);
+
+        // Doble clic para ver detalles
+        tablaProductos.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && tablaProductos.getSelectionModel().getSelectedItem() != null) {
+                mostrarDetalleProducto(tablaProductos.getSelectionModel().getSelectedItem());
+            }
         });
 
-        // Agregar el campo de texto y la tabla al layout
-        layout.getChildren().addAll(filtroField, productoTable);
-
-        return layout;
+        box.getChildren().addAll(topBar, tablaProductos);
+        return box;
     }
 
-    private void abrirVentanaEdicion(Producto producto) throws IOException {
-        productoController.cargarPreciosProducto(producto);
-        productoController.cargarFabricantesProducto(producto);
-        productoController.cargarClientesProducto(producto);
-        productoController.cargarEmpresasProducto(producto);
+    private VBox crearPanelFormulario() {
+        VBox card = new VBox(0);
+        card.setStyle(AppTheme.STYLE_CARD);
 
-        Stage ventanaEdicion = new Stage();
-        ventanaEdicion.setTitle("Editar Producto");
+        lblTituloFormulario = new Label("Nuevo Producto");
+        lblTituloFormulario.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #111827;");
+        lblTituloFormulario.setPadding(new Insets(20));
 
-        GridPane layout = new GridPane();
-        layout.setPadding(new Insets(20));
-        layout.setHgap(10);
-        layout.setVgap(10);
+        // Inicializar vistas internas
+        inicializarVistasFormulario();
 
-        TextField nombreField = new TextField(producto.getNombreProducto());
-        TextField fichaField = new TextField(producto.getFichaProducto());
-        TextField alternoField = new TextField(producto.getAlternoProducto());
-        TextField existenciaField = new TextField(String.valueOf(producto.getExistenciaProducto()));
+        // Crear Barra de Navegación (Tabs estilo Botones)
+        HBox navBar = new HBox(5);
+        navBar.setPadding(new Insets(0, 20, 10, 20));
+        navBar.setStyle("-fx-border-color: transparent transparent #E5E7EB transparent; -fx-border-width: 0 0 1 0;");
+        
+        navButtons = new HashMap<>();
+        // Creamos los botones de navegación
+        crearBotonNav("General", navBar, viewGeneral);
+        crearBotonNav("Proveedores", navBar, viewProveedores);
+        crearBotonNav("Clientes", navBar, viewClientes);
+        crearBotonNav("Fabricantes", navBar, viewFabricantes);
+        crearBotonNav("Empresas", navBar, viewEmpresas);
+        crearBotonNav("Servicios", navBar, viewServicios);
 
-        TextArea infoRelacionada = new TextArea(obtenerInformacionRelacionada(producto));
-        infoRelacionada.setEditable(false);
+        // Panel donde se mostrará el contenido dinámico
+        contentPanel = new BorderPane();
+        contentPanel.setPadding(new Insets(20));
+        contentPanel.setCenter(viewGeneral); // Por defecto
+        actualizarEstiloBotones("General");
 
-        // Validación de datos antes de actualizar
-        Button btnActualizar = new Button("Actualizar");
-        btnActualizar.setOnAction(e -> {
-            String nombre = nombreField.getText();
-            String ficha = fichaField.getText();
-            String alterno = alternoField.getText();
-            String existenciaTexto = existenciaField.getText();
+        ScrollPane scrollPane = new ScrollPane(contentPanel);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-            // Validación de campos vacíos
-            if (nombre.isEmpty() || ficha.isEmpty() || alterno.isEmpty() || existenciaTexto.isEmpty()) {
-                showAlert("Error", "Todos los campos deben estar completos", Alert.AlertType.ERROR);
-                return;
+        // --- Footer ---
+        VBox footer = new VBox(10);
+        footer.setPadding(new Insets(20));
+        footer.setStyle("-fx-border-color: #E5E7EB transparent transparent transparent; -fx-border-width: 1 0 0 0;");
+
+        btnGuardar = UIFactory.crearBotonPrimario("Guardar Producto");
+        btnGuardar.setMaxWidth(Double.MAX_VALUE);
+        btnGuardar.setOnAction(e -> guardarProducto());
+
+        Button btnLimpiar = UIFactory.crearBotonTexto("Limpiar / Cancelar");
+        btnLimpiar.setMaxWidth(Double.MAX_VALUE);
+        btnLimpiar.setOnAction(e -> limpiarFormulario());
+
+        footer.getChildren().addAll(btnGuardar, btnLimpiar);
+        card.getChildren().addAll(lblTituloFormulario, navBar, scrollPane, footer);
+        
+        return card;
+    }
+
+    // Método helper para crear botones de navegación
+    private void crearBotonNav(String titulo, HBox container, Node view) {
+        Button btn = new Button(titulo);
+        btn.setPrefHeight(30);
+        // Estilo base
+        btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #6B7280; -fx-font-weight: 600; -fx-cursor: hand; -fx-background-radius: 6;");
+        
+        btn.setOnAction(e -> {
+            contentPanel.setCenter(view);
+            actualizarEstiloBotones(titulo);
+        });
+        
+        container.getChildren().add(btn);
+        navButtons.put(titulo, btn);
+    }
+
+    private void actualizarEstiloBotones(String activo) {
+        navButtons.forEach((k, btn) -> {
+            if (k.equals(activo)) {
+                // Estilo Activo: Color primario suave de fondo, texto primario
+                btn.setStyle("-fx-background-color: #FFEDD5; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + "; -fx-font-weight: bold; -fx-cursor: default; -fx-background-radius: 6;");
+            } else {
+                // Estilo Inactivo
+                btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #6B7280; -fx-font-weight: 600; -fx-cursor: hand; -fx-background-radius: 6;");
+                btn.setOnMouseEntered(e -> {
+                    if(!btn.getText().equals(activo)) 
+                        btn.setStyle("-fx-background-color: #F3F4F6; -fx-text-fill: #374151; -fx-font-weight: 600; -fx-background-radius: 6;");
+                });
+                btn.setOnMouseExited(e -> {
+                    if(!btn.getText().equals(activo)) 
+                        btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #6B7280; -fx-font-weight: 600; -fx-background-radius: 6;");
+                });
             }
+        });
+    }
 
-            // Validación de existencia (debe ser un número entero positivo)
-            int existencia;
-            try {
-                existencia = Integer.parseInt(existenciaTexto);
-                if (existencia < 0) {
-                    showAlert("Error", "La existencia debe ser un número entero positivo", Alert.AlertType.ERROR);
-                    return;
-                }
-            } catch (NumberFormatException ex) {
-                showAlert("Error", "La existencia debe ser un número válido", Alert.AlertType.ERROR);
-                return;
-            }
+    private void inicializarVistasFormulario() {
+        // 1. General
+        txtNombre = UIFactory.crearInput("Nombre del Producto *");
+        txtFicha = UIFactory.crearInput("Descripción / Ficha");
+        txtAlterno = UIFactory.crearInput("Código Alterno");
+        txtExistencia = UIFactory.crearInput("0");
+        
+        viewGeneral = new VBox(15,
+            UIFactory.crearGrupoInput("Nombre *", txtNombre),
+            UIFactory.crearGrupoInput("Ficha Técnica", txtFicha),
+            new HBox(15, 
+                UIFactory.crearGrupoInput("Alterno", txtAlterno),
+                UIFactory.crearGrupoInput("Existencia", txtExistencia)
+            ),
+            crearSelectorCategorias()
+        );
 
-            // Actualizar producto
-            producto.setNombreProducto(nombre);
-            producto.setFichaProducto(ficha);
-            producto.setAlternoProducto(alterno);
-            producto.setExistenciaProducto(existencia);
+        // 2. Otras Vistas
+        viewProveedores = crearSubFormularioProveedores();
+        viewClientes = crearSubFormularioClientes();
+        viewFabricantes = crearSubFormularioFabricantes();
+        viewEmpresas = crearSubFormularioEmpresas();
+        viewServicios = crearSubFormularioServicios();
+    }
 
-            try {
-                productoController.actualizarProducto(producto);
-                cargarProductos(); // Cargar la lista actualizada
-                ventanaEdicion.close();
-            } catch (IOException | SQLException ex) {
-                showAlert("Error", "No se pudo actualizar el producto", Alert.AlertType.ERROR);
-                ex.printStackTrace();
+    // ==========================================
+    // SUB-FORMULARIOS (Relaciones)
+    // ==========================================
+
+    private VBox crearSelectorCategorias() {
+        VBox box = new VBox(10);
+        ComboBox<Categoria> cmbCat = new ComboBox<>();
+        cmbCat.setItems(FXCollections.observableArrayList(productoService.obtenerCategorias()));
+        configurarCombo(cmbCat, Categoria::getNombreCategoria);
+        cmbCat.setPromptText("Seleccionar Categoría");
+        cmbCat.setMaxWidth(Double.MAX_VALUE);
+        
+        ListView<String> listCat = new ListView<>();
+        listCat.setPrefHeight(100);
+        listCat.setStyle("-fx-border-color: #E5E7EB; -fx-border-radius: 4; -fx-font-size: 13px;");
+        
+        actualizarListaString(listCat, categoriasSeleccionadas, Categoria::getNombreCategoria);
+        
+        Button btnAdd = UIFactory.crearBotonSecundario("Añadir Categoría");
+        btnAdd.setOnAction(e -> {
+            if(cmbCat.getValue() != null && !categoriasSeleccionadas.contains(cmbCat.getValue())) {
+                categoriasSeleccionadas.add(cmbCat.getValue());
+                actualizarListaString(listCat, categoriasSeleccionadas, Categoria::getNombreCategoria);
             }
         });
 
-        // Confirmación antes de eliminar
-        Button btnEliminar = new Button("Eliminar");
-        btnEliminar.setOnAction(e -> {
-            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION,
-                    "¿Estás seguro de que quieres eliminar este producto?");
-            confirmacion.setTitle("Confirmar eliminación");
-            confirmacion.showAndWait().ifPresent(response -> {
-                if (response == ButtonType.OK) {
-                    try {
-                        productoController.eliminarProducto(producto.getIdProducto());
-                        cargarProductos(); // Actualizar la lista
-                        ventanaEdicion.close();
-                    } catch (IOException | SQLException ex) {
-                        showAlert("Error", "No se pudo eliminar el producto", Alert.AlertType.ERROR);
-                        ex.printStackTrace();
-                    }
-                }
-            });
+        configurarMenuContextual(listCat, index -> {
+            if (index >= 0 && index < categoriasSeleccionadas.size()) {
+                categoriasSeleccionadas.remove((int)index);
+                actualizarListaString(listCat, categoriasSeleccionadas, Categoria::getNombreCategoria);
+            }
         });
 
-        HBox botones = new HBox(10, btnActualizar, btnEliminar);
-        botones.setAlignment(Pos.CENTER);
-
-        layout.add(new Label("Nombre:"), 0, 0);
-        layout.add(nombreField, 1, 0);
-        layout.add(new Label("Ficha:"), 0, 1);
-        layout.add(fichaField, 1, 1);
-        layout.add(new Label("Alterno:"), 0, 2);
-        layout.add(alternoField, 1, 2);
-        layout.add(new Label("Existencia:"), 0, 3);
-        layout.add(existenciaField, 1, 3);
-        layout.add(new Label("Información Relacionada:"), 0, 4, 2, 1);
-        layout.add(infoRelacionada, 0, 5, 2, 1);
-        layout.add(botones, 0, 6, 2, 1);
-
-        Scene escena = new Scene(layout, 400, 350);
-        ventanaEdicion.setScene(escena);
-        ventanaEdicion.show();
+        box.getChildren().addAll(new Label("Categorías Asignadas:"), new HBox(10, cmbCat, btnAdd), listCat);
+        return box;
     }
 
-    private String obtenerInformacionRelacionada(Producto producto) {
-        StringBuilder info = new StringBuilder();
+    private VBox crearSubFormularioProveedores() {
+        VBox box = new VBox(15);
+        
+        ComboBox<Proveedor> cmb = new ComboBox<>();
+        cmb.setItems(FXCollections.observableArrayList(productoService.obtenerProveedores()));
+        configurarCombo(cmb, Proveedor::getNombreProv);
+        cmb.setPromptText("Seleccionar Proveedor");
+        cmb.setMaxWidth(Double.MAX_VALUE);
 
-        info.append("Proveedores:\n");
-        producto.getPreciosPorProveedor()
-                .forEach((proveedor, precio) -> info.append(proveedor.getNombreProv()).append(" - Precio: ")
-                        .append(precio.getMonto()).append(" ")
-                        .append(precio.getMoneda()).append("\n"));
+        TextField txtCosto = UIFactory.crearInput("Costo Compra");
+        ComboBox<String> cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
+        cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
+        cmbMoneda.getSelectionModel().selectFirst();
+        cmbMoneda.setPrefWidth(100);
 
-        info.append("\nClientes:\n");
-        producto.getPreciosPorCliente()
-                .forEach((cliente, precio) -> info.append(cliente.getNombreCliente()).append(" - Precio: ")
-                        .append(precio.getMonto()).append(" ")
-                        .append(precio.getMoneda()).append("\n"));
+        Button btnAdd = UIFactory.crearBotonSecundario("Añadir");
+        btnAdd.setOnAction(e -> {
+            if(cmb.getValue() != null && !txtCosto.getText().isEmpty()) {
+                ProductoProveedor pp = new ProductoProveedor();
+                pp.setProveedor(cmb.getValue());
+                try { pp.setCosto(Double.parseDouble(txtCosto.getText())); } catch(Exception ex) { return; }
+                pp.setMoneda(cmbMoneda.getValue());
+                proveedoresAgregados.add(pp);
+                txtCosto.clear();
+            }
+        });
 
-        info.append("\nEmpresas:\n");
-        producto.getPreciosPorEmpresa()
-                .forEach((empresa, precio) -> info.append(empresa.getNombreEmpresa()).append(" - Precio: ")
-                        .append(precio.getMonto()).append(" ")
-                        .append(precio.getMoneda()).append("\n"));
+        HBox controls = new HBox(10, UIFactory.crearGrupoInput("Costo", txtCosto), UIFactory.crearGrupoInput("Moneda", cmbMoneda), new VBox(19, new Label(""), btnAdd));
+        controls.setAlignment(Pos.BOTTOM_LEFT);
 
-        info.append("\nFabricantes:\n");
-        producto.getPreciosPorFabricante()
-                .forEach((fabricante, precio) -> info.append(fabricante.getNombreFabricante()).append(" - Precio: ")
-                        .append(precio.getMonto()).append(" ")
-                        .append(precio.getMoneda()).append("\n"));
+        TableView<ProductoProveedor> table = crearTablaRelacion("Proveedor");
+        table.setItems(proveedoresAgregados);
+        
+        TableColumn<ProductoProveedor, String> colNombre = new TableColumn<>("Proveedor");
+        colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getProveedor().getNombreProv()));
+        
+        TableColumn<ProductoProveedor, String> colPrecio = new TableColumn<>("Precio");
+        colPrecio.setCellValueFactory(data -> new SimpleStringProperty("$" + data.getValue().getCosto() + " " + data.getValue().getMoneda()));
+        
+        table.getColumns().addAll(colNombre, colPrecio);
+        configurarMenuTabla(table, proveedoresAgregados);
 
-        return info.toString();
+        box.getChildren().addAll(UIFactory.crearGrupoInput("Proveedor", cmb), controls, table);
+        return box;
     }
 
-    private void cargarProductos() throws SQLException {
+    private VBox crearSubFormularioClientes() {
+        VBox box = new VBox(15);
+        
+        ComboBox<Cliente> cmb = new ComboBox<>();
+        cmb.setItems(FXCollections.observableArrayList(productoService.obtenerClientes()));
+        configurarCombo(cmb, Cliente::getNombreCliente);
+        cmb.setMaxWidth(Double.MAX_VALUE);
+
+        TextField txtCosto = UIFactory.crearInput("Precio Venta");
+        ComboBox<String> cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
+        cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
+        cmbMoneda.getSelectionModel().selectFirst();
+        cmbMoneda.setPrefWidth(100);
+
+        Button btnAdd = UIFactory.crearBotonSecundario("Añadir");
+        btnAdd.setOnAction(e -> {
+            if(cmb.getValue() != null && !txtCosto.getText().isEmpty()) {
+                ProductoCliente pc = new ProductoCliente();
+                pc.setCliente(cmb.getValue());
+                try { pc.setCosto(Double.parseDouble(txtCosto.getText())); } catch(Exception ex) { return; }
+                pc.setMoneda(cmbMoneda.getValue());
+                clientesAgregados.add(pc);
+                txtCosto.clear();
+            }
+        });
+
+        HBox controls = new HBox(10, UIFactory.crearGrupoInput("Precio Venta", txtCosto), UIFactory.crearGrupoInput("Moneda", cmbMoneda), new VBox(19, new Label(""), btnAdd));
+        controls.setAlignment(Pos.BOTTOM_LEFT);
+
+        TableView<ProductoCliente> table = crearTablaRelacion("Cliente");
+        table.setItems(clientesAgregados);
+        
+        TableColumn<ProductoCliente, String> colNombre = new TableColumn<>("Cliente");
+        colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCliente().getNombreCliente()));
+        
+        TableColumn<ProductoCliente, String> colPrecio = new TableColumn<>("Precio");
+        colPrecio.setCellValueFactory(data -> new SimpleStringProperty("$" + data.getValue().getCosto() + " " + data.getValue().getMoneda()));
+        
+        table.getColumns().addAll(colNombre, colPrecio);
+        configurarMenuTabla(table, clientesAgregados);
+
+        box.getChildren().addAll(UIFactory.crearGrupoInput("Cliente", cmb), controls, table);
+        return box;
+    }
+
+    private VBox crearSubFormularioFabricantes() {
+        VBox box = new VBox(15);
+        
+        ComboBox<Fabricante> cmb = new ComboBox<>();
+        cmb.setItems(FXCollections.observableArrayList(productoService.obtenerFabricantes()));
+        configurarCombo(cmb, Fabricante::getNombreFabricante);
+        cmb.setMaxWidth(Double.MAX_VALUE);
+
+        TextField txtCosto = UIFactory.crearInput("Costo");
+        ComboBox<String> cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
+        cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
+        cmbMoneda.getSelectionModel().selectFirst();
+        cmbMoneda.setPrefWidth(100);
+
+        Button btnAdd = UIFactory.crearBotonSecundario("Añadir");
+        btnAdd.setOnAction(e -> {
+            if(cmb.getValue() != null && !txtCosto.getText().isEmpty()) {
+                ProductoFabricante pf = new ProductoFabricante();
+                pf.setFabricante(cmb.getValue());
+                try { pf.setCosto(Double.parseDouble(txtCosto.getText())); } catch(Exception ex) { return; }
+                pf.setMoneda(cmbMoneda.getValue());
+                fabricantesAgregados.add(pf);
+                txtCosto.clear();
+            }
+        });
+
+        HBox controls = new HBox(10, UIFactory.crearGrupoInput("Costo", txtCosto), UIFactory.crearGrupoInput("Moneda", cmbMoneda), new VBox(19, new Label(""), btnAdd));
+        controls.setAlignment(Pos.BOTTOM_LEFT);
+
+        TableView<ProductoFabricante> table = crearTablaRelacion("Fabricante");
+        table.setItems(fabricantesAgregados);
+        
+        TableColumn<ProductoFabricante, String> colNombre = new TableColumn<>("Fabricante");
+        colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getFabricante().getNombreFabricante()));
+        
+        TableColumn<ProductoFabricante, String> colPrecio = new TableColumn<>("Precio");
+        colPrecio.setCellValueFactory(data -> new SimpleStringProperty("$" + data.getValue().getCosto() + " " + data.getValue().getMoneda()));
+        
+        table.getColumns().addAll(colNombre, colPrecio);
+        configurarMenuTabla(table, fabricantesAgregados);
+
+        box.getChildren().addAll(UIFactory.crearGrupoInput("Fabricante", cmb), controls, table);
+        return box;
+    }
+
+    private VBox crearSubFormularioEmpresas() {
+        VBox box = new VBox(15);
+        
+        ComboBox<Empresa> cmb = new ComboBox<>();
+        cmb.setItems(FXCollections.observableArrayList(productoService.obtenerEmpresas()));
+        configurarCombo(cmb, Empresa::getNombreEmpresa);
+        cmb.setMaxWidth(Double.MAX_VALUE);
+
+        TextField txtCosto = UIFactory.crearInput("Costo Mercado");
+        ComboBox<String> cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
+        cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
+        cmbMoneda.getSelectionModel().selectFirst();
+        cmbMoneda.setPrefWidth(100);
+
+        Button btnAdd = UIFactory.crearBotonSecundario("Añadir");
+        btnAdd.setOnAction(e -> {
+            if(cmb.getValue() != null && !txtCosto.getText().isEmpty()) {
+                ProductoEmpresa pe = new ProductoEmpresa();
+                pe.setEmpresa(cmb.getValue());
+                try { pe.setCosto(Double.parseDouble(txtCosto.getText())); } catch(Exception ex) { return; }
+                pe.setMoneda(cmbMoneda.getValue());
+                empresasAgregadas.add(pe);
+                txtCosto.clear();
+            }
+        });
+
+        HBox controls = new HBox(10, UIFactory.crearGrupoInput("Costo", txtCosto), UIFactory.crearGrupoInput("Moneda", cmbMoneda), new VBox(19, new Label(""), btnAdd));
+        controls.setAlignment(Pos.BOTTOM_LEFT);
+
+        TableView<ProductoEmpresa> table = crearTablaRelacion("Empresa");
+        table.setItems(empresasAgregadas);
+        
+        TableColumn<ProductoEmpresa, String> colNombre = new TableColumn<>("Empresa");
+        colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getEmpresa().getNombreEmpresa()));
+        
+        TableColumn<ProductoEmpresa, String> colPrecio = new TableColumn<>("Precio");
+        colPrecio.setCellValueFactory(data -> new SimpleStringProperty("$" + data.getValue().getCosto() + " " + data.getValue().getMoneda()));
+        
+        table.getColumns().addAll(colNombre, colPrecio);
+        configurarMenuTabla(table, empresasAgregadas);
+
+        box.getChildren().addAll(UIFactory.crearGrupoInput("Empresa", cmb), controls, table);
+        return box;
+    }
+
+    private VBox crearSubFormularioServicios() {
+        VBox box = new VBox(15);
+        
+        ComboBox<Servicio> cmb = new ComboBox<>();
+        cmb.setItems(FXCollections.observableArrayList(productoService.obtenerServicios()));
+        configurarCombo(cmb, Servicio::getDescripcionServicio);
+        cmb.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnAdd = UIFactory.crearBotonSecundario("Añadir Servicio");
+        btnAdd.setOnAction(e -> {
+            if(cmb.getValue() != null && !serviciosSeleccionados.contains(cmb.getValue())) {
+                serviciosSeleccionados.add(cmb.getValue());
+            }
+        });
+
+        TableView<Servicio> table = crearTablaRelacion("Servicio");
+        table.setItems(serviciosSeleccionados);
+        
+        TableColumn<Servicio, String> colNombre = new TableColumn<>("Servicio");
+        colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getDescripcionServicio()));
+        
+        TableColumn<Servicio, String> colPrecio = new TableColumn<>("Costo Base");
+        colPrecio.setCellValueFactory(data -> new SimpleStringProperty("$" + data.getValue().getCostoServicio() + " " + data.getValue().getMonedaServicio()));
+        
+        table.getColumns().addAll(colNombre, colPrecio);
+        configurarMenuTabla(table, serviciosSeleccionados);
+
+        box.getChildren().addAll(UIFactory.crearGrupoInput("Servicio", cmb), btnAdd, table);
+        return box;
+    }
+
+    // ==========================================
+    // UTILERÍAS DE UI (Privadas)
+    // ==========================================
+
+    private <T> void configurarCombo(ComboBox<T> combo, Function<T, String> textExtractor) {
+        combo.setStyle(AppTheme.STYLE_INPUT);
+        combo.setConverter(new StringConverter<T>() {
+            @Override public String toString(T object) { return object == null ? null : textExtractor.apply(object); }
+            @Override public T fromString(String string) { return null; }
+        });
+        combo.setCellFactory(lv -> new ListCell<T>() {
+            @Override protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : textExtractor.apply(item));
+            }
+        });
+        combo.setButtonCell(new ListCell<T>() {
+            @Override protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : textExtractor.apply(item));
+            }
+        });
+    }
+
+    private <T> TableView<T> crearTablaRelacion(String nombreEntidad) {
+        TableView<T> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        table.setPrefHeight(150);
+        table.setStyle("-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-font-size: 12px;");
+        table.setPlaceholder(new Label("Sin " + nombreEntidad.toLowerCase() + "s asignados"));
+        return table;
+    }
+
+    private <T> void actualizarListaString(ListView<String> listView, ObservableList<T> source, Function<T, String> textExtractor) {
+        listView.getItems().setAll(source.stream().map(textExtractor).collect(Collectors.toList()));
+    }
+
+    private <T> void configurarMenuTabla(TableView<T> table, ObservableList<T> list) {
+        ContextMenu cm = new ContextMenu();
+        MenuItem deleteItem = new MenuItem("Quitar selección");
+        deleteItem.setStyle("-fx-text-fill: red;");
+        deleteItem.setOnAction(e -> {
+            T selected = table.getSelectionModel().getSelectedItem();
+            if (selected != null) list.remove(selected);
+        });
+        cm.getItems().add(deleteItem);
+        table.setContextMenu(cm);
+    }
+
+    private void configurarMenuContextual(Control control, java.util.function.Consumer<Integer> onDelete) {
+        ContextMenu cm = new ContextMenu();
+        MenuItem deleteItem = new MenuItem("Eliminar");
+        deleteItem.setStyle("-fx-text-fill: red;");
+        if (control instanceof ListView) {
+            deleteItem.setOnAction(e -> onDelete.accept(((ListView<?>) control).getSelectionModel().getSelectedIndex()));
+        }
+        cm.getItems().add(deleteItem);
+        control.setContextMenu(cm);
+    }
+
+    // ==========================================
+    // LÓGICA CRUD
+    // ==========================================
+
+    private void guardarProducto() {
+        if (txtNombre.getText().trim().isEmpty()) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Campos Faltantes", "El nombre es obligatorio", stage);
+            return;
+        }
+
+        Producto p = (productoEnEdicion != null) ? productoEnEdicion : new Producto();
+        p.setNombreProducto(txtNombre.getText().trim());
+        p.setFichaProducto(txtFicha.getText().trim());
+        p.setAlternoProducto(txtAlterno.getText().trim());
+        
         try {
-            ProductoController productoController = new ProductoController();
-            List<Producto> productos = productoController.consultarProductos();
+            p.setExistenciaProducto(Integer.parseInt(txtExistencia.getText().trim()));
+        } catch (NumberFormatException e) {
+            p.setExistenciaProducto(0);
+        }
 
-            // Agregar los productos con sus datos relacionados a la tabla
-            for (Producto producto : productos) {
-                productoTable.getItems().add(producto);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        p.setCategorias(new ArrayList<>(categoriasSeleccionadas));
+
+        p.getProductoProveedores().clear();
+        for (ProductoProveedor pp : proveedoresAgregados) p.addProveedor(pp);
+
+        p.getProductoClientes().clear();
+        for (ProductoCliente pc : clientesAgregados) p.addCliente(pc);
+
+        p.getProductoFabricantes().clear();
+        for (ProductoFabricante pf : fabricantesAgregados) p.addFabricante(pf);
+
+        p.getProductoEmpresas().clear();
+        for (ProductoEmpresa pe : empresasAgregadas) p.addEmpresa(pe);
+
+        p.setServicios(new ArrayList<>(serviciosSeleccionados));
+
+        String resultado = productoService.guardarProducto(p);
+
+        if (resultado.toLowerCase().contains("exitosamente")) {
+            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", resultado, stage);
+            limpiarFormulario();
+            cargarProductos();
+        } else {
+            dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", resultado, stage);
         }
     }
 
-    private void mostrarFormularioRegistro() {
-        root.getChildren().set(1, formularioRegistro);
+    private void prepararEdicion(Producto pResumen) {
+        Producto pFull = productoService.obtenerProductoCompleto(pResumen.getIdProducto());
+        
+        this.productoEnEdicion = pFull;
+        lblTituloFormulario.setText("Editar Producto (ID: " + pFull.getIdProducto() + ")");
+        btnGuardar.setText("Actualizar Producto");
+        btnGuardar.setStyle("-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        txtNombre.setText(pFull.getNombreProducto());
+        txtFicha.setText(pFull.getFichaProducto());
+        txtAlterno.setText(pFull.getAlternoProducto());
+        txtExistencia.setText(String.valueOf(pFull.getExistenciaProducto()));
+
+        categoriasSeleccionadas.setAll(pFull.getCategorias());
+        proveedoresAgregados.setAll(pFull.getProductoProveedores());
+        clientesAgregados.setAll(pFull.getProductoClientes());
+        fabricantesAgregados.setAll(pFull.getProductoFabricantes());
+        empresasAgregadas.setAll(pFull.getProductoEmpresas());
+        serviciosSeleccionados.setAll(pFull.getServicios());
+        
+        // Volver a la pestaña general al editar
+        navButtons.get("General").fire();
     }
 
-    private void mostrarConsultaProductos() throws SQLException {
-        cargarProductos();
-        root.getChildren().set(1, consultaProductos);
+    private void mostrarDetalleProducto(Producto p) {
+        Producto pFull = productoService.obtenerProductoCompleto(p.getIdProducto());
+        
+        Stage dialog = new Stage();
+        UIFactory.configurarStageModal(dialog, stage);
+
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(30));
+        root.setStyle(AppTheme.STYLE_DIALOG_BG + " -fx-background-radius: 12;");
+        root.setMinWidth(600);
+        root.setMaxWidth(600);
+        root.setMaxHeight(600);
+
+        // Header
+        Label lblTitulo = new Label(pFull.getNombreProducto());
+        lblTitulo.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+        Label lblSub = new Label(pFull.getFichaProducto() != null ? pFull.getFichaProducto() : "Sin ficha técnica");
+        lblSub.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 14px;");
+
+        ScrollPane scroll = new ScrollPane();
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0;");
+        
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(0, 10, 0, 0));
+
+        // Grid básica
+        GridPane grid = new GridPane();
+        grid.setHgap(20);
+        grid.setVgap(10);
+        grid.add(UIFactory.crearDatoDetalle("Código Alterno:", pFull.getAlternoProducto()), 0, 0);
+        grid.add(UIFactory.crearDatoDetalle("Existencia:", String.valueOf(pFull.getExistenciaProducto())), 1, 0);
+        
+        // Categorías
+        String catStr = pFull.getCategorias().stream().map(Categoria::getNombreCategoria).collect(Collectors.joining(", "));
+        grid.add(UIFactory.crearDatoDetalle("Categorías:", catStr.isEmpty() ? "Ninguna" : catStr), 0, 1, 2, 1);
+
+        content.getChildren().addAll(grid, new Separator());
+
+        // Secciones dinámicas
+        agregarSeccionDetalle(content, "Proveedores", pFull.getProductoProveedores().stream()
+            .map(pp -> pp.getProveedor().getNombreProv() + " ($" + pp.getCosto() + " " + pp.getMoneda() + ")")
+            .collect(Collectors.toList()));
+            
+        agregarSeccionDetalle(content, "Clientes", pFull.getProductoClientes().stream()
+            .map(pc -> pc.getCliente().getNombreCliente() + " ($" + pc.getCosto() + " " + pc.getMoneda() + ")")
+            .collect(Collectors.toList()));
+
+        agregarSeccionDetalle(content, "Fabricantes", pFull.getProductoFabricantes().stream()
+            .map(pf -> pf.getFabricante().getNombreFabricante() + " ($" + pf.getCosto() + " " + pf.getMoneda() + ")")
+            .collect(Collectors.toList()));
+
+        scroll.setContent(content);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        // Footer
+        Button btnCerrar = UIFactory.crearBotonSecundario("Cerrar");
+        btnCerrar.setOnAction(e -> dialog.close());
+        HBox boxBtn = new HBox(btnCerrar);
+        boxBtn.setAlignment(Pos.CENTER_RIGHT);
+        boxBtn.setPadding(new Insets(10, 0, 0, 0));
+
+        root.getChildren().addAll(lblTitulo, lblSub, new Separator(), scroll, new Separator(), boxBtn);
+        dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 
-    private void showAlert(String title, String message, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void agregarSeccionDetalle(VBox parent, String titulo, java.util.List<String> items) {
+        if (items.isEmpty()) return;
+        
+        Label lblHeader = new Label(titulo);
+        lblHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: #111827; -fx-padding: 5 0 2 0;");
+        parent.getChildren().add(lblHeader);
+        
+        for (String item : items) {
+            Label lblItem = new Label("• " + item);
+            lblItem.setStyle("-fx-text-fill: #4B5563; -fx-padding: 0 0 0 10;");
+            parent.getChildren().add(lblItem);
+        }
+        parent.getChildren().add(new Region()); // Spacer tiny
     }
 
-    private void mostrarMenuPrincipal(Stage primaryStage) {
-        MenuPrincipalScreen menuPrincipalScreen = new MenuPrincipalScreen(primaryStage, usuarioActual);
-        menuPrincipalScreen.mostrarMenu();
+    private void eliminarProducto(Producto p) {
+        if (dialogService.mostrarConfirmacion("Eliminar Producto", "¿Deseas eliminar '" + p.getNombreProducto() + "'?", stage)) {
+            if (productoService.eliminarProducto(p)) {
+                cargarProductos();
+                if (productoEnEdicion != null && productoEnEdicion.getIdProducto().equals(p.getIdProducto())) {
+                    limpiarFormulario();
+                }
+            } else {
+                dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar el producto.", stage);
+            }
+        }
+    }
+
+    private void limpiarFormulario() {
+        productoEnEdicion = null;
+        lblTituloFormulario.setText("Nuevo Producto");
+        btnGuardar.setText("Guardar Producto");
+        btnGuardar.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        txtNombre.clear();
+        txtFicha.clear();
+        txtAlterno.clear();
+        txtExistencia.setText("0");
+
+        categoriasSeleccionadas.clear();
+        proveedoresAgregados.clear();
+        clientesAgregados.clear();
+        fabricantesAgregados.clear();
+        empresasAgregadas.clear();
+        serviciosSeleccionados.clear();
+        
+        navButtons.get("General").fire();
+    }
+
+    private void cargarProductos() {
+        tablaProductos.getItems().setAll(productoService.consultarProductos());
     }
 }
-*/
