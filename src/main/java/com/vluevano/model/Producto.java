@@ -11,8 +11,9 @@ import java.util.List;
 @Entity
 @Table(name = "producto")
 @Data
-@EqualsAndHashCode(of = "idProducto") // Evita ciclos infinitos en Lombok
-@ToString(exclude = {"productoProveedores", "productoClientes", "productoEmpresas", "productoFabricantes", "servicios", "categorias"})
+@EqualsAndHashCode(of = "idProducto")
+@ToString(exclude = { "productoProveedores", "productoClientes", "productoEmpresas", "productoFabricantes", "servicios",
+        "categorias" })
 public class Producto {
 
     @Id
@@ -32,13 +33,9 @@ public class Producto {
     @Column(name = "existenciaproducto")
     private int existenciaProducto;
 
-    // Relación simple (sin columnas extra)
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "productocategoria", joinColumns = @JoinColumn(name = "idproducto"), inverseJoinColumns = @JoinColumn(name = "idcategoria"))
     private List<Categoria> categorias = new ArrayList<>();
-
-    // Relaciones complejas (con precio y moneda)
-    // Usamos cascade ALL para que al guardar el producto, se guarden sus relaciones
 
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProductoProveedor> productoProveedores = new ArrayList<>();
@@ -52,13 +49,10 @@ public class Producto {
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProductoFabricante> productoFabricantes = new ArrayList<>();
 
-    // Servicios (asumiendo tabla simple o relación N:M directa según tu schema
-    // último)
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "productoservicio", joinColumns = @JoinColumn(name = "idproducto"), inverseJoinColumns = @JoinColumn(name = "idservicio"))
     private List<Servicio> servicios = new ArrayList<>();
 
-    // Métodos Helper para mantener la consistencia bidireccional
     public void addProveedor(ProductoProveedor pp) {
         productoProveedores.add(pp);
         pp.setProducto(this);

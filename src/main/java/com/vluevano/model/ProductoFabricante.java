@@ -25,11 +25,9 @@ public class ProductoFabricante {
     @JoinColumn(name = "idfabricante")
     private Fabricante fabricante;
 
-    // Según tu SQL: costocomprafab
     @Column(name = "costocomprafab")
     private Double costo;
 
-    // Según tu SQL: monedacomprafab
     @Column(name = "monedacomprafab")
     private String moneda;
 }

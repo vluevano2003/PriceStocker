@@ -14,6 +14,11 @@ import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.scene.control.*;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.ObservableList;
+import java.util.List;
+import java.util.function.Function;
 
 public class UIFactory {
 
@@ -199,5 +204,64 @@ public class UIFactory {
         dialogStage.initOwner(ownerStage);
         dialogStage.initModality(Modality.WINDOW_MODAL);
         dialogStage.initStyle(StageStyle.TRANSPARENT);
+    }
+
+    /**
+     * Crea una tabla para gestionar relaciones
+     * @param <T>
+     * @param items
+     * @param tituloCol1
+     * @param valCol1
+     * @param tituloCol2
+     * @param valCol2
+     * @param permitirEliminar
+     * @return
+     */
+    public static <T> TableView<T> crearTablaRelacion(
+            ObservableList<T> items,
+            String tituloCol1, Function<T, String> valCol1,
+            String tituloCol2, Function<T, String> valCol2,
+            boolean permitirEliminar) {
+
+        TableView<T> table = new TableView<>();
+        table.setItems(items);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        table.setPrefHeight(150);
+        table.setStyle("-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+        table.setPlaceholder(new Label("Sin registros asignados"));
+
+        TableColumn<T, String> col1 = new TableColumn<>(tituloCol1);
+        col1.setCellValueFactory(d -> new SimpleStringProperty(valCol1.apply(d.getValue())));
+
+        TableColumn<T, String> col2 = new TableColumn<>(tituloCol2);
+        col2.setCellValueFactory(d -> new SimpleStringProperty(valCol2.apply(d.getValue())));
+        col2.setStyle("-fx-alignment: CENTER-RIGHT;");
+        col2.setMinWidth(120);
+        col2.setMaxWidth(150);
+
+        table.getColumns().addAll(List.of(col1, col2));
+
+        if (permitirEliminar) {
+            TableColumn<T, Void> colEliminar = new TableColumn<>("");
+            colEliminar.setMinWidth(45);
+            colEliminar.setMaxWidth(45);
+            colEliminar.setStyle("-fx-alignment: CENTER;");
+            colEliminar.setCellFactory(param -> new TableCell<>() {
+                private final Button btn = new Button("X");
+                {
+                    btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #DC2626; -fx-font-weight: bold; -fx-cursor: hand; -fx-border-color: #DC2626; -fx-border-radius: 3; -fx-padding: 2 6 2 6;");
+                    btn.setOnAction(event -> {
+                        T item = getTableView().getItems().get(getIndex());
+                        items.remove(item);
+                    });
+                }
+                @Override protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setGraphic(empty ? null : btn);
+                }
+            });
+            table.getColumns().add(colEliminar);
+        }
+        return table;
     }
 }

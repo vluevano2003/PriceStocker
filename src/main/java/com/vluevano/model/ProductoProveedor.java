@@ -12,12 +12,12 @@ public class ProductoProveedor {
     private ProductoProveedorId id = new ProductoProveedorId();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("idProducto") // Mapea parte de la llave compuesta
+    @MapsId("idProducto")
     @JoinColumn(name = "idproducto")
     private Producto producto;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @MapsId("idProveedor") // Mapea parte de la llave compuesta
+    @MapsId("idProveedor")
     @JoinColumn(name = "idproveedor")
     private Proveedor proveedor;
 

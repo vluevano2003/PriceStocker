@@ -25,11 +25,9 @@ public class ProductoEmpresa {
     @JoinColumn(name = "idempresa")
     private Empresa empresa;
 
-    // Según tu SQL: costomercado
     @Column(name = "costomercado")
     private Double costo;
 
-    // Según tu SQL: monedamercado
     @Column(name = "monedamercado")
     private String moneda;
 }

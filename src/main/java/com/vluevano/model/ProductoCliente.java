@@ -25,11 +25,9 @@ public class ProductoCliente {
     @JoinColumn(name = "idcliente")
     private Cliente cliente;
 
-    // Según tu SQL: costoventa DOUBLE PRECISION
     @Column(name = "costoventa")
     private Double costo;
 
-    // Según tu SQL: monedaventa VARCHAR(3)
     @Column(name = "monedaventa")
     private String moneda;
 }
