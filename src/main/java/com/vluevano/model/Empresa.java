@@ -32,7 +32,7 @@ public class Empresa {
     private int noExtEmpresa;
 
     @Column(name = "nointempresa")
-    private int noIntEmpresa;
+    private String noIntEmpresa;
 
     @Column(name = "cpempresa")
     private int cpEmpresa;

@@ -64,7 +64,7 @@ public class RelacionViewBuilder {
         ComboBox<String> cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
         cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
         cmbMoneda.getSelectionModel().selectFirst();
-        cmbMoneda.setPrefWidth(100);
+        cmbMoneda.setPrefWidth(150);
 
         Button btnAdd = new Button("Añadir");
         btnAdd.setStyle(

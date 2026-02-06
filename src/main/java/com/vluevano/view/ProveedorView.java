@@ -5,6 +5,8 @@ import com.vluevano.service.DialogService;
 import com.vluevano.service.ProveedorService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
+import com.vluevano.util.ValidationUtils;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -77,6 +79,7 @@ public class ProveedorView {
         root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
         root.setTop(UIFactory.crearHeader("Gestión de Proveedores",
+                "Administra los proveedores a los que se les compra productos de forma regular",
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenidoCentral = new HBox(30);
@@ -115,7 +118,11 @@ public class ProveedorView {
         tablaProveedores = new TableView<>();
         tablaProveedores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         tablaProveedores.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        Label lblVacio = new Label("No hay proveedores registrados aún.");
+        lblVacio.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;");
+        tablaProveedores.setPlaceholder(lblVacio);
 
         TableColumn<Proveedor, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdProveedor())));
@@ -134,7 +141,7 @@ public class ProveedorView {
         colCorreo.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCorreoProv()));
         colCorreo.setMinWidth(150);
 
-        TableColumn<Proveedor, String> colDireccion = new TableColumn<>("Dirección Completa");
+        TableColumn<Proveedor, String> colDireccion = new TableColumn<>("Dirección");
         colDireccion.setCellValueFactory(data -> {
             Proveedor p = data.getValue();
             return new SimpleStringProperty(String.format("%s #%d, %s",
@@ -193,20 +200,20 @@ public class ProveedorView {
         VBox inputsContainer = new VBox(10);
         inputsContainer.setPadding(new Insets(0, 20, 20, 20));
 
-        txtNombre = UIFactory.crearInput("Ej. Juan Pérez");
-        txtTelefono = UIFactory.crearInput("Ej. 55 1234 5678");
-        txtCorreo = UIFactory.crearInput("contacto@empresa.com");
-        txtCalle = UIFactory.crearInput("Ej. Av. Reforma");
-        txtNoExt = UIFactory.crearInput("Ej. 123");
-        txtNoInt = UIFactory.crearInput("Ej. Piso 2");
-        txtCp = UIFactory.crearInput("Ej. 06600");
-        txtColonia = UIFactory.crearInput("Ej. Juárez");
-        txtCiudad = UIFactory.crearInput("Ej. Ciudad de México");
-        txtMunicipio = UIFactory.crearInput("Ej. Cuauhtémoc");
-        txtEstado = UIFactory.crearInput("Ej. CDMX");
+        txtNombre = UIFactory.crearInput("Ej. Distribuidora del Sur S.A. de C.V.");
+        txtTelefono = UIFactory.crearInput("Ej. 55 8123 4567");
+        txtCorreo = UIFactory.crearInput("Ej. ventas@proveedor.com");
+        txtCalle = UIFactory.crearInput("Ej. Av. Vallarta");
+        txtNoExt = UIFactory.crearInput("Ej. 505");
+        txtNoInt = UIFactory.crearInput("Ej. Bodega 3");
+        txtCp = UIFactory.crearInput("Ej. 44100");
+        txtColonia = UIFactory.crearInput("Ej. Centro");
+        txtCiudad = UIFactory.crearInput("Ej. Guadalajara");
+        txtMunicipio = UIFactory.crearInput("Ej. Guadalajara");
+        txtEstado = UIFactory.crearInput("Ej. Jalisco");
         txtPais = UIFactory.crearInput("Ej. México");
-        txtRfc = UIFactory.crearInput("Ej. XAXX010101000");
-        txtCurp = UIFactory.crearInput("Ej. CURP");
+        txtRfc = UIFactory.crearInput("Ej. PRO800101A12");
+        txtCurp = UIFactory.crearInput("Ej. ABCD800101HDFRXX01");
 
         cmbTipoPersona = new ComboBox<>();
         cmbTipoPersona.getItems().addAll("Persona Moral", "Persona Física");
@@ -216,7 +223,7 @@ public class ProveedorView {
 
         inputsContainer.getChildren().addAll(
                 UIFactory.crearTituloSeccion("Datos Personales"),
-                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Nombre *", txtNombre),
                 UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
                 UIFactory.crearGrupoInput("Correo *", txtCorreo),
 
@@ -266,11 +273,35 @@ public class ProveedorView {
      * Registra o actualiza un proveedor según el estado del formulario
      */
     private void registrarProveedor() {
-        if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
-                esVacio(txtCalle) || esVacio(txtNoExt) || esVacio(txtCp) ||
-                esVacio(txtColonia) || esVacio(txtCiudad) || esVacio(txtEstado) || esVacio(txtPais)) {
+        if (ValidationUtils.esVacio(txtNombre) || ValidationUtils.esVacio(txtTelefono)
+                || ValidationUtils.esVacio(txtCorreo) ||
+                ValidationUtils.esVacio(txtCalle) || ValidationUtils.esVacio(txtNoExt) || ValidationUtils.esVacio(txtCp)
+                ||
+                ValidationUtils.esVacio(txtColonia) || ValidationUtils.esVacio(txtCiudad)
+                || ValidationUtils.esVacio(txtEstado) || ValidationUtils.esVacio(txtPais)) {
             dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Campos Faltantes",
                     "Por favor llene todos los campos marcados con *", stage);
+            return;
+        }
+
+        if (!ValidationUtils.esEmailValido(txtCorreo.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El correo electrónico no es válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esTelefonoValido(txtTelefono.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El teléfono debe tener 10 dígitos.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtRfc) && !ValidationUtils.esRfcValido(txtRfc.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El RFC no tiene un formato válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtCurp) && !ValidationUtils.esCurpValido(txtCurp.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "La CURP no tiene un formato válido.", stage);
             return;
         }
 
@@ -279,18 +310,19 @@ public class ProveedorView {
         prov.setNombreProv(txtNombre.getText().trim());
         prov.setTelefonoProv(txtTelefono.getText().trim());
         prov.setCorreoProv(txtCorreo.getText().trim());
-        prov.setRfcProveedor(esVacio(txtRfc) ? null : txtRfc.getText().trim());
-        prov.setCurp(esVacio(txtCurp) ? null : txtCurp.getText().trim());
+        prov.setRfcProveedor(ValidationUtils.esVacio(txtRfc) ? null : txtRfc.getText().trim().toUpperCase());
+        prov.setCurp(ValidationUtils.esVacio(txtCurp) ? null : txtCurp.getText().trim().toUpperCase());
 
         try {
             prov.setCpProveedor(Integer.parseInt(txtCp.getText().trim()));
             prov.setNoExtProv(Integer.parseInt(txtNoExt.getText().trim()));
-            prov.setNoIntProv(esVacio(txtNoInt) ? 0 : Integer.parseInt(txtNoInt.getText().trim()));
         } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
-                    "CP, No. Ext y No. Int deben ser números válidos.", stage);
+                    "El CP y el No. Exterior deben ser números válidos.", stage);
             return;
         }
+
+        prov.setNoIntProv(ValidationUtils.esVacio(txtNoInt) ? null : txtNoInt.getText().trim());
 
         prov.setCalle(txtCalle.getText().trim());
         prov.setColonia(txtColonia.getText().trim());
@@ -382,15 +414,19 @@ public class ProveedorView {
         this.proveedorEnEdicion = p;
         lblTituloFormulario.setText("Editar Proveedor (ID: " + p.getIdProveedor() + ")");
         btnGuardar.setText("Actualizar Proveedor");
-        btnGuardar.setStyle(
-                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        String styleBlue = "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        String styleBlueHover = "-fx-background-color: #1D4ED8; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        btnGuardar.setStyle(styleBlue);
+        btnGuardar.setOnMouseEntered(e -> btnGuardar.setStyle(styleBlueHover));
+        btnGuardar.setOnMouseExited(e -> btnGuardar.setStyle(styleBlue));
 
         txtNombre.setText(p.getNombreProv());
         txtTelefono.setText(p.getTelefonoProv());
         txtCorreo.setText(p.getCorreoProv());
         txtCalle.setText(p.getCalle());
         txtNoExt.setText(String.valueOf(p.getNoExtProv()));
-        txtNoInt.setText(p.getNoIntProv() == 0 ? "" : String.valueOf(p.getNoIntProv()));
+        txtNoInt.setText(p.getNoIntProv() == null ? "" : p.getNoIntProv());
         txtCp.setText(String.valueOf(p.getCpProveedor()));
         txtColonia.setText(p.getColonia());
         txtCiudad.setText(p.getCiudad());
@@ -436,7 +472,7 @@ public class ProveedorView {
         grid.add(UIFactory.crearDatoDetalle("Correo:", prov.getCorreoProv()), 1, 0);
 
         String direccion = String.format("%s #%d%s", prov.getCalle(), prov.getNoExtProv(),
-                (prov.getNoIntProv() > 0 ? " Int " + prov.getNoIntProv() : ""));
+                (prov.getNoIntProv() != null && !prov.getNoIntProv().isEmpty() ? " Int " + prov.getNoIntProv() : ""));
         grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
         grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", prov.getColonia() + " C.P. " + prov.getCpProveedor()), 1, 1);
 
@@ -457,15 +493,5 @@ public class ProveedorView {
 
         root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
         dialogService.mostrarDialogoModal(dialog, root, stage);
-    }
-
-    /**
-     * Verifica si un TextField está vacío
-     * 
-     * @param tf
-     * @return
-     */
-    private boolean esVacio(TextField tf) {
-        return tf.getText() == null || tf.getText().trim().isEmpty();
     }
 }

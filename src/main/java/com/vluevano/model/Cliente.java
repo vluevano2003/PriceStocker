@@ -16,9 +16,6 @@ public class Cliente {
     @Column(name = "nombrecliente", nullable = false)
     private String nombreCliente;
 
-    @Column(name = "nombrefcliente")
-    private String nombreFiscal;
-
     @Column(name = "rfccliente", length = 13)
     private String rfcCliente;
 
@@ -35,7 +32,7 @@ public class Cliente {
     private int noExtCliente;
 
     @Column(name = "nointcliente")
-    private int noIntCliente;
+    private String noIntCliente;
 
     @Column(name = "cpcliente")
     private int cpCliente;

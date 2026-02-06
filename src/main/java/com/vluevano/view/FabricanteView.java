@@ -5,6 +5,8 @@ import com.vluevano.service.DialogService;
 import com.vluevano.service.FabricanteService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
+import com.vluevano.util.ValidationUtils;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -77,6 +79,7 @@ public class FabricanteView {
         root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
         root.setTop(UIFactory.crearHeader("Gestión de Fabricantes",
+                "Administra los fabricantes a los que se les compra productos de forma regular",
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenidoCentral = new HBox(30);
@@ -115,7 +118,11 @@ public class FabricanteView {
         tablaFabricantes = new TableView<>();
         tablaFabricantes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         tablaFabricantes.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        Label lblVacio = new Label("No hay fabricantes registrados aún.");
+        lblVacio.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;");
+        tablaFabricantes.setPlaceholder(lblVacio);
 
         TableColumn<Fabricante, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdFabricante())));
@@ -134,7 +141,7 @@ public class FabricanteView {
         colCorreo.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCorreoFabricante()));
         colCorreo.setMinWidth(150);
 
-        TableColumn<Fabricante, String> colDireccion = new TableColumn<>("Dirección Completa");
+        TableColumn<Fabricante, String> colDireccion = new TableColumn<>("Dirección");
         colDireccion.setCellValueFactory(data -> {
             Fabricante f = data.getValue();
             return new SimpleStringProperty(String.format("%s #%d, %s",
@@ -193,20 +200,20 @@ public class FabricanteView {
         VBox inputsContainer = new VBox(10);
         inputsContainer.setPadding(new Insets(0, 20, 20, 20));
 
-        txtNombre = UIFactory.crearInput("Ej. Intel Corp");
-        txtTelefono = UIFactory.crearInput("Ej. 55 1234 5678");
-        txtCorreo = UIFactory.crearInput("contacto@intel.com");
-        txtCalle = UIFactory.crearInput("Ej. Av. Reforma");
-        txtNoExt = UIFactory.crearInput("Ej. 123");
-        txtNoInt = UIFactory.crearInput("Ej. Piso 2");
-        txtCp = UIFactory.crearInput("Ej. 06600");
-        txtColonia = UIFactory.crearInput("Ej. Juárez");
-        txtCiudad = UIFactory.crearInput("Ej. Ciudad de México");
-        txtMunicipio = UIFactory.crearInput("Ej. Cuauhtémoc");
-        txtEstado = UIFactory.crearInput("Ej. CDMX");
+        txtNombre = UIFactory.crearInput("Ej. Manufacturas Industriales S.A.");
+        txtTelefono = UIFactory.crearInput("Ej. 81 2233 4455");
+        txtCorreo = UIFactory.crearInput("Ej. planta@fabricante.com");
+        txtCalle = UIFactory.crearInput("Ej. Carr. Monterrey-Saltillo");
+        txtNoExt = UIFactory.crearInput("Ej. Km 12.5");
+        txtNoInt = UIFactory.crearInput("Ej. Nave 4");
+        txtCp = UIFactory.crearInput("Ej. 66350");
+        txtColonia = UIFactory.crearInput("Ej. Zona Industrial");
+        txtCiudad = UIFactory.crearInput("Ej. Santa Catarina");
+        txtMunicipio = UIFactory.crearInput("Ej. Santa Catarina");
+        txtEstado = UIFactory.crearInput("Ej. Nuevo León");
         txtPais = UIFactory.crearInput("Ej. México");
-        txtRfc = UIFactory.crearInput("Ej. XAXX010101000");
-        txtCurp = UIFactory.crearInput("Ej. CURP");
+        txtRfc = UIFactory.crearInput("Ej. MIN701231T12");
+        txtCurp = UIFactory.crearInput("Ej. ABCD701231HNLRSX05");
 
         cmbTipoPersona = new ComboBox<>();
         cmbTipoPersona.getItems().addAll("Persona Moral", "Persona Física");
@@ -216,7 +223,7 @@ public class FabricanteView {
 
         inputsContainer.getChildren().addAll(
                 UIFactory.crearTituloSeccion("Datos Personales"),
-                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Nombre *", txtNombre),
                 UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
                 UIFactory.crearGrupoInput("Correo *", txtCorreo),
 
@@ -266,11 +273,35 @@ public class FabricanteView {
      * Registra o actualiza un fabricante según el estado del formulario
      */
     private void registrarFabricante() {
-        if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
-                esVacio(txtCalle) || esVacio(txtNoExt) || esVacio(txtCp) ||
-                esVacio(txtColonia) || esVacio(txtCiudad) || esVacio(txtEstado) || esVacio(txtPais)) {
+        if (ValidationUtils.esVacio(txtNombre) || ValidationUtils.esVacio(txtTelefono)
+                || ValidationUtils.esVacio(txtCorreo) ||
+                ValidationUtils.esVacio(txtCalle) || ValidationUtils.esVacio(txtNoExt) || ValidationUtils.esVacio(txtCp)
+                ||
+                ValidationUtils.esVacio(txtColonia) || ValidationUtils.esVacio(txtCiudad)
+                || ValidationUtils.esVacio(txtEstado) || ValidationUtils.esVacio(txtPais)) {
             dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Campos Faltantes",
                     "Por favor llene todos los campos marcados con *", stage);
+            return;
+        }
+
+        if (!ValidationUtils.esEmailValido(txtCorreo.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El correo electrónico no es válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esTelefonoValido(txtTelefono.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El teléfono debe tener 10 dígitos.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtRfc) && !ValidationUtils.esRfcValido(txtRfc.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El RFC no tiene un formato válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtCurp) && !ValidationUtils.esCurpValido(txtCurp.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "La CURP no tiene un formato válido.", stage);
             return;
         }
 
@@ -279,18 +310,19 @@ public class FabricanteView {
         f.setNombreFabricante(txtNombre.getText().trim());
         f.setTelefonoFabricante(txtTelefono.getText().trim());
         f.setCorreoFabricante(txtCorreo.getText().trim());
-        f.setRfcFabricante(esVacio(txtRfc) ? null : txtRfc.getText().trim());
-        f.setCurp(esVacio(txtCurp) ? null : txtCurp.getText().trim());
+        f.setRfcFabricante(ValidationUtils.esVacio(txtRfc) ? null : txtRfc.getText().trim().toUpperCase());
+        f.setCurp(ValidationUtils.esVacio(txtCurp) ? null : txtCurp.getText().trim().toUpperCase());
 
         try {
             f.setCpFabricante(Integer.parseInt(txtCp.getText().trim()));
             f.setNoExtFabricante(Integer.parseInt(txtNoExt.getText().trim()));
-            f.setNoIntFabricante(esVacio(txtNoInt) ? 0 : Integer.parseInt(txtNoInt.getText().trim()));
         } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
-                    "CP, No. Ext y No. Int deben ser números válidos.", stage);
+                    "El CP y el No. Exterior deben ser números válidos.", stage);
             return;
         }
+
+        f.setNoIntFabricante(ValidationUtils.esVacio(txtNoInt) ? null : txtNoInt.getText().trim());
 
         f.setCalle(txtCalle.getText().trim());
         f.setColonia(txtColonia.getText().trim());
@@ -382,15 +414,19 @@ public class FabricanteView {
         this.fabricanteEnEdicion = f;
         lblTituloFormulario.setText("Editar Fabricante (ID: " + f.getIdFabricante() + ")");
         btnGuardar.setText("Actualizar Fabricante");
-        btnGuardar.setStyle(
-                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        String styleBlue = "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        String styleBlueHover = "-fx-background-color: #1D4ED8; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        btnGuardar.setStyle(styleBlue);
+        btnGuardar.setOnMouseEntered(e -> btnGuardar.setStyle(styleBlueHover));
+        btnGuardar.setOnMouseExited(e -> btnGuardar.setStyle(styleBlue));
 
         txtNombre.setText(f.getNombreFabricante());
         txtTelefono.setText(f.getTelefonoFabricante());
         txtCorreo.setText(f.getCorreoFabricante());
         txtCalle.setText(f.getCalle());
         txtNoExt.setText(String.valueOf(f.getNoExtFabricante()));
-        txtNoInt.setText(f.getNoIntFabricante() == 0 ? "" : String.valueOf(f.getNoIntFabricante()));
+        txtNoInt.setText(f.getNoIntFabricante() == null ? "" : f.getNoIntFabricante());
         txtCp.setText(String.valueOf(f.getCpFabricante()));
         txtColonia.setText(f.getColonia());
         txtCiudad.setText(f.getCiudad());
@@ -435,7 +471,8 @@ public class FabricanteView {
         grid.add(UIFactory.crearDatoDetalle("Correo:", f.getCorreoFabricante()), 1, 0);
 
         String direccion = String.format("%s #%d%s", f.getCalle(), f.getNoExtFabricante(),
-                (f.getNoIntFabricante() > 0 ? " Int " + f.getNoIntFabricante() : ""));
+                (f.getNoIntFabricante() != null && !f.getNoIntFabricante().isEmpty() ? " Int " + f.getNoIntFabricante()
+                        : ""));
         grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
         grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", f.getColonia() + " C.P. " + f.getCpFabricante()), 1, 1);
 
@@ -456,15 +493,5 @@ public class FabricanteView {
 
         root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
         dialogService.mostrarDialogoModal(dialog, root, stage);
-    }
-
-    /**
-     * Verifica si un TextField está vacío
-     * 
-     * @param tf
-     * @return
-     */
-    private boolean esVacio(TextField tf) {
-        return tf.getText() == null || tf.getText().trim().isEmpty();
     }
 }

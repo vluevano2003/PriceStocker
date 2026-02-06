@@ -6,6 +6,8 @@ import com.vluevano.service.DialogService;
 import com.vluevano.service.PrestadorServicioService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
+import com.vluevano.util.ValidationUtils;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -82,6 +84,7 @@ public class PrestadorServicioView {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
         root.setTop(UIFactory.crearHeader("Gestión de Prestadores",
+                "Administra los prestadores de servicio a los que se les contratan servicios de forma regular",
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenidoCentral = new HBox(30);
@@ -101,8 +104,7 @@ public class PrestadorServicioView {
 
     /**
      * Crea el panel de la tabla de prestadores
-     * 
-     * @return
+     * * @return
      */
     @SuppressWarnings("unchecked")
     private VBox crearPanelTabla() {
@@ -118,8 +120,19 @@ public class PrestadorServicioView {
 
         tablaPrestadores = new TableView<>();
         tablaPrestadores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+
         tablaPrestadores.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        Label lblVacio = new Label("No hay prestadores de servicios registrados aún.");
+        lblVacio.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;");
+        tablaPrestadores.setPlaceholder(lblVacio);
+
+        TableColumn<PrestadorServicio, String> colId = new TableColumn<>("ID");
+        colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdPrestador())));
+        colId.setMinWidth(50);
+        colId.setMaxWidth(50);
+        colId.setStyle("-fx-alignment: CENTER;");
 
         TableColumn<PrestadorServicio, String> colNombre = new TableColumn<>("Prestador");
         colNombre.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getNombrePrestador()));
@@ -162,11 +175,91 @@ public class PrestadorServicioView {
             }
         });
 
-        tablaPrestadores.getColumns().addAll(colNombre, colTel, colUbicacion, colServicios, colAcciones);
+        tablaPrestadores.getColumns().addAll(colId, colNombre, colTel, colUbicacion, colServicios, colAcciones);
         VBox.setVgrow(tablaPrestadores, Priority.ALWAYS);
+
+        tablaPrestadores.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && tablaPrestadores.getSelectionModel().getSelectedItem() != null) {
+                mostrarDetallePrestador(tablaPrestadores.getSelectionModel().getSelectedItem());
+            }
+        });
 
         box.getChildren().addAll(topBar, tablaPrestadores);
         return box;
+    }
+
+    /**
+     * Muestra el detalle completo de un prestador en un diálogo modal
+     * 
+     * @param prestador
+     */
+    private void mostrarDetallePrestador(PrestadorServicio prestador) {
+        Stage dialog = new Stage();
+
+        UIFactory.configurarStageModal(dialog, stage);
+
+        VBox root = new VBox(20);
+        root.setPadding(new Insets(30));
+        root.setStyle(AppTheme.STYLE_DIALOG_BG + " -fx-background-radius: 12;");
+        root.setMinWidth(600);
+        root.setMaxWidth(600);
+
+        Label lblTitulo = new Label(prestador.getNombrePrestador());
+        lblTitulo
+                .setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+
+        Label lblSub = new Label(prestador.isEsPersonaFisica() ? "Persona Física" : "Persona Moral");
+        lblSub.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 14px;");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(20);
+        grid.setVgap(10);
+
+        grid.add(UIFactory.crearDatoDetalle("Teléfono:", prestador.getTelefonoPrestador()), 0, 0);
+        grid.add(UIFactory.crearDatoDetalle("Correo:", prestador.getCorreoPrestador()), 1, 0);
+
+        String direccion = String.format("%s #%d%s", prestador.getCalle(), prestador.getNoExtPrestador(),
+                (prestador.getNoIntPrestador() != null && !prestador.getNoIntPrestador().isEmpty()
+                        ? " Int " + prestador.getNoIntPrestador()
+                        : ""));
+        grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
+        grid.add(UIFactory.crearDatoDetalle("Colonia/CP:",
+                prestador.getColonia() + " C.P. " + prestador.getCpPrestador()), 1, 1);
+
+        grid.add(UIFactory.crearDatoDetalle("Ciudad/Mun:", prestador.getCiudad() + ", " + prestador.getMunicipio()), 0,
+                2);
+        grid.add(UIFactory.crearDatoDetalle("Estado/País:", prestador.getEstado() + ", " + prestador.getPais()), 1, 2);
+
+        if (prestador.getCurp() != null && !prestador.getCurp().isEmpty())
+            grid.add(UIFactory.crearDatoDetalle("CURP:", prestador.getCurp()), 0, 3);
+
+        if (prestador.getRfcPrestador() != null && !prestador.getRfcPrestador().isEmpty())
+            grid.add(UIFactory.crearDatoDetalle("RFC:", prestador.getRfcPrestador()), 1, 3);
+
+        Label lblServicios = new Label("Servicios Ofrecidos:");
+        lblServicios.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-padding: 10 0 5 0;");
+
+        VBox listaServicios = new VBox(5);
+        for (Servicio s : prestador.getServicios()) {
+            Label ls = new Label(
+                    "• " + s.getDescripcionServicio() + " - $" + s.getCostoServicio() + " " + s.getMonedaServicio());
+            ls.setStyle("-fx-text-fill: #4B5563;");
+            listaServicios.getChildren().add(ls);
+        }
+
+        ScrollPane scrollServicios = new ScrollPane(listaServicios);
+        scrollServicios.setMaxHeight(100);
+        scrollServicios.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+
+        Button btnCerrar = UIFactory.crearBotonSecundario("Cerrar");
+        btnCerrar.setOnAction(e -> dialog.close());
+
+        HBox footer = new HBox(btnCerrar);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+
+        root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, lblServicios, scrollServicios,
+                new Separator(), footer);
+        dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 
     /**
@@ -186,21 +279,21 @@ public class PrestadorServicioView {
         VBox inputsContainer = new VBox(10);
         inputsContainer.setPadding(new Insets(0, 20, 20, 20));
 
-        txtNombre = UIFactory.crearInput("Ej. Transportes del Norte");
-        txtRfc = UIFactory.crearInput("RFC");
-        txtTelefono = UIFactory.crearInput("Teléfono");
-        txtCorreo = UIFactory.crearInput("Email");
-        txtCurp = UIFactory.crearInput("CURP");
+        txtNombre = UIFactory.crearInput("Ej. Transportes y Fletes Rápidos");
+        txtRfc = UIFactory.crearInput("Ej. TFR101010XYZ");
+        txtTelefono = UIFactory.crearInput("Ej. 229 988 7766");
+        txtCorreo = UIFactory.crearInput("Ej. facturacion@transportes.com");
+        txtCurp = UIFactory.crearInput("Ej. GOMA850215HVZRRX05");
 
-        txtCalle = UIFactory.crearInput("Calle");
-        txtNoExt = UIFactory.crearInput("No. Ext");
-        txtNoInt = UIFactory.crearInput("Int");
-        txtCp = UIFactory.crearInput("CP");
-        txtColonia = UIFactory.crearInput("Colonia");
-        txtCiudad = UIFactory.crearInput("Ciudad");
-        txtMunicipio = UIFactory.crearInput("Municipio");
-        txtEstado = UIFactory.crearInput("Estado");
-        txtPais = UIFactory.crearInput("País");
+        txtCalle = UIFactory.crearInput("Ej. Calzada Ignacio Zaragoza");
+        txtNoExt = UIFactory.crearInput("Ej. 45");
+        txtNoInt = UIFactory.crearInput("Ej. Bodega B");
+        txtCp = UIFactory.crearInput("Ej. 91000");
+        txtColonia = UIFactory.crearInput("Ej. Centro");
+        txtCiudad = UIFactory.crearInput("Ej. Xalapa");
+        txtMunicipio = UIFactory.crearInput("Ej. Xalapa");
+        txtEstado = UIFactory.crearInput("Ej. Veracruz");
+        txtPais = UIFactory.crearInput("Ej. México");
 
         cmbTipoPersona = new ComboBox<>();
         cmbTipoPersona.getItems().addAll("Persona Moral", "Persona Física");
@@ -283,7 +376,7 @@ public class PrestadorServicioView {
 
         inputsContainer.getChildren().addAll(
                 UIFactory.crearTituloSeccion("Datos Personales"),
-                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Nombre *", txtNombre),
                 UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
                 UIFactory.crearGrupoInput("Correo *", txtCorreo),
 
@@ -351,14 +444,39 @@ public class PrestadorServicioView {
      * Registra o actualiza un prestador de servicio
      */
     private void registrarPrestador() {
-        if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
-                esVacio(txtCalle) || esVacio(txtNoExt) || esVacio(txtCp) ||
-                esVacio(txtColonia) || esVacio(txtCiudad) || esVacio(txtEstado) || esVacio(txtPais)) {
+        if (ValidationUtils.esVacio(txtNombre) || ValidationUtils.esVacio(txtTelefono)
+                || ValidationUtils.esVacio(txtCorreo) ||
+                ValidationUtils.esVacio(txtCalle) || ValidationUtils.esVacio(txtNoExt) || ValidationUtils.esVacio(txtCp)
+                ||
+                ValidationUtils.esVacio(txtColonia) || ValidationUtils.esVacio(txtCiudad)
+                || ValidationUtils.esVacio(txtEstado) || ValidationUtils.esVacio(txtPais)) {
 
             dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Campos Faltantes",
                     "Por favor llene todos los campos marcados con *", stage);
             return;
         }
+
+        if (!ValidationUtils.esEmailValido(txtCorreo.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El correo electrónico no es válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esTelefonoValido(txtTelefono.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El teléfono debe tener 10 dígitos.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtRfc) && !ValidationUtils.esRfcValido(txtRfc.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El RFC no tiene un formato válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtCurp) && !ValidationUtils.esCurpValido(txtCurp.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "La CURP no tiene un formato válido.", stage);
+            return;
+        }
+
         if (serviciosObservable.isEmpty()) {
             dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Servicios Requeridos",
                     "Debe agregar al menos un servicio a la lista para registrar al prestador.", stage);
@@ -368,10 +486,10 @@ public class PrestadorServicioView {
 
         PrestadorServicio p = (prestadorEnEdicion != null) ? prestadorEnEdicion : new PrestadorServicio();
         p.setNombrePrestador(txtNombre.getText().trim());
-        p.setRfcPrestador(esVacio(txtRfc) ? null : txtRfc.getText().trim());
+        p.setRfcPrestador(ValidationUtils.esVacio(txtRfc) ? null : txtRfc.getText().trim().toUpperCase());
         p.setTelefonoPrestador(txtTelefono.getText().trim());
         p.setCorreoPrestador(txtCorreo.getText().trim());
-        p.setCurp(esVacio(txtCurp) ? null : txtCurp.getText().trim());
+        p.setCurp(ValidationUtils.esVacio(txtCurp) ? null : txtCurp.getText().trim().toUpperCase());
 
         String tipoSeleccionado = cmbTipoPersona.getValue();
         p.setEsPersonaFisica(tipoSeleccionado != null && tipoSeleccionado.equals("Persona Física"));
@@ -379,13 +497,13 @@ public class PrestadorServicioView {
         try {
             p.setCpPrestador(Integer.parseInt(txtCp.getText().trim()));
             p.setNoExtPrestador(Integer.parseInt(txtNoExt.getText().trim()));
-            String noInt = txtNoInt.getText();
-            p.setNoIntPrestador(esVacio(txtNoInt) ? 0 : Integer.parseInt(noInt.trim()));
         } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
-                    "CP, No. Ext y No. Int deben ser números válidos.", stage);
+                    "El CP y el No. Exterior deben ser números válidos.", stage);
             return;
         }
+
+        p.setNoIntPrestador(ValidationUtils.esVacio(txtNoInt) ? null : txtNoInt.getText().trim());
 
         p.setCalle(txtCalle.getText().trim());
         p.setColonia(txtColonia.getText().trim());
@@ -399,6 +517,7 @@ public class PrestadorServicioView {
         }
 
         String res = prestadorService.guardarPrestador(p);
+
         if (res.toLowerCase().contains("exitosamente")) {
             String accion = (prestadorEnEdicion != null) ? "actualizado" : "guardado";
             dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Prestador " + accion + " correctamente.",
@@ -419,8 +538,12 @@ public class PrestadorServicioView {
         this.prestadorEnEdicion = p;
         lblTituloFormulario.setText("Editar Prestador (ID: " + p.getIdPrestador() + ")");
         btnGuardar.setText("Actualizar Prestador");
-        btnGuardar.setStyle(
-                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        String styleBlue = "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        String styleBlueHover = "-fx-background-color: #1D4ED8; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        btnGuardar.setStyle(styleBlue);
+        btnGuardar.setOnMouseEntered(e -> btnGuardar.setStyle(styleBlueHover));
+        btnGuardar.setOnMouseExited(e -> btnGuardar.setStyle(styleBlue));
 
         txtNombre.setText(p.getNombrePrestador());
         txtRfc.setText(p.getRfcPrestador() == null ? "" : p.getRfcPrestador());
@@ -435,7 +558,7 @@ public class PrestadorServicioView {
 
         txtCalle.setText(p.getCalle());
         txtNoExt.setText(String.valueOf(p.getNoExtPrestador()));
-        txtNoInt.setText(p.getNoIntPrestador() == 0 ? "" : String.valueOf(p.getNoIntPrestador()));
+        txtNoInt.setText(p.getNoIntPrestador() == null ? "" : p.getNoIntPrestador());
         txtCp.setText(String.valueOf(p.getCpPrestador()));
         txtColonia.setText(p.getColonia());
         txtCiudad.setText(p.getCiudad());

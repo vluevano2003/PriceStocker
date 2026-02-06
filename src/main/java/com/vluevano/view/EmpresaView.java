@@ -5,6 +5,8 @@ import com.vluevano.service.DialogService;
 import com.vluevano.service.EmpresaService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
+import com.vluevano.util.ValidationUtils;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -76,7 +78,8 @@ public class EmpresaView {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
-        root.setTop(UIFactory.crearHeader("Gestión de Empresas",
+        root.setTop(UIFactory.crearHeader("Gestión de Competencia del Mercado",
+                "Administra las empresas que compiten vendiendo los mismos productos",
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenidoCentral = new HBox(30);
@@ -115,7 +118,11 @@ public class EmpresaView {
         tablaEmpresas = new TableView<>();
         tablaEmpresas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         tablaEmpresas.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        Label lblVacio = new Label("No hay empresas registradas aún.");
+        lblVacio.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;");
+        tablaEmpresas.setPlaceholder(lblVacio);
 
         TableColumn<Empresa, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdEmpresa())));
@@ -134,7 +141,7 @@ public class EmpresaView {
         colCorreo.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCorreoEmpresa()));
         colCorreo.setMinWidth(150);
 
-        TableColumn<Empresa, String> colDireccion = new TableColumn<>("Dirección Completa");
+        TableColumn<Empresa, String> colDireccion = new TableColumn<>("Dirección");
         colDireccion.setCellValueFactory(data -> {
             Empresa e = data.getValue();
             return new SimpleStringProperty(String.format("%s #%d, %s",
@@ -193,20 +200,20 @@ public class EmpresaView {
         VBox inputsContainer = new VBox(10);
         inputsContainer.setPadding(new Insets(0, 20, 20, 20));
 
-        txtNombre = UIFactory.crearInput("Ej. Soluciones Tecnológicas");
-        txtTelefono = UIFactory.crearInput("Ej. 55 1234 5678");
-        txtCorreo = UIFactory.crearInput("contacto@empresa.com");
-        txtCalle = UIFactory.crearInput("Ej. Av. Reforma");
-        txtNoExt = UIFactory.crearInput("Ej. 100");
-        txtNoInt = UIFactory.crearInput("Ej. 2B");
-        txtCp = UIFactory.crearInput("Ej. 96400");
-        txtColonia = UIFactory.crearInput("Ej. Centro");
-        txtCiudad = UIFactory.crearInput("Ej. Coatzacoalcos");
-        txtMunicipio = UIFactory.crearInput("Ej. Coatzacoalcos");
-        txtEstado = UIFactory.crearInput("Ej. Veracruz");
+        txtNombre = UIFactory.crearInput("Ej. Innovación Digital S.A. de C.V.");
+        txtTelefono = UIFactory.crearInput("Ej. 55 4321 8765");
+        txtCorreo = UIFactory.crearInput("Ej. info@competidor.com");
+        txtCalle = UIFactory.crearInput("Ej. Av. Insurgentes Sur");
+        txtNoExt = UIFactory.crearInput("Ej. 1500");
+        txtNoInt = UIFactory.crearInput("Ej. Despacho 402");
+        txtCp = UIFactory.crearInput("Ej. 03200");
+        txtColonia = UIFactory.crearInput("Ej. Del Valle");
+        txtCiudad = UIFactory.crearInput("Ej. Ciudad de México");
+        txtMunicipio = UIFactory.crearInput("Ej. Benito Juárez");
+        txtEstado = UIFactory.crearInput("Ej. CDMX");
         txtPais = UIFactory.crearInput("Ej. México");
-        txtRfc = UIFactory.crearInput("Ej. RFC123456789");
-        txtCurp = UIFactory.crearInput("CURP (Si aplica)");
+        txtRfc = UIFactory.crearInput("Ej. IDC900515K10");
+        txtCurp = UIFactory.crearInput("Ej. ABCD900515HDFRXX09");
 
         cmbTipoPersona = new ComboBox<>();
         cmbTipoPersona.getItems().addAll("Persona Moral", "Persona Física");
@@ -216,7 +223,7 @@ public class EmpresaView {
 
         inputsContainer.getChildren().addAll(
                 UIFactory.crearTituloSeccion("Datos Generales"),
-                UIFactory.crearGrupoInput("Nombre Empresa *", txtNombre),
+                UIFactory.crearGrupoInput("Nombre *", txtNombre),
                 UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
                 UIFactory.crearGrupoInput("Correo *", txtCorreo),
 
@@ -266,11 +273,35 @@ public class EmpresaView {
      * Registra o actualiza una empresa según el estado del formulario
      */
     private void registrarEmpresa() {
-        if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
-                esVacio(txtCalle) || esVacio(txtNoExt) || esVacio(txtCp) ||
-                esVacio(txtColonia) || esVacio(txtCiudad) || esVacio(txtEstado) || esVacio(txtPais)) {
+        if (ValidationUtils.esVacio(txtNombre) || ValidationUtils.esVacio(txtTelefono)
+                || ValidationUtils.esVacio(txtCorreo) ||
+                ValidationUtils.esVacio(txtCalle) || ValidationUtils.esVacio(txtNoExt) || ValidationUtils.esVacio(txtCp)
+                ||
+                ValidationUtils.esVacio(txtColonia) || ValidationUtils.esVacio(txtCiudad)
+                || ValidationUtils.esVacio(txtEstado) || ValidationUtils.esVacio(txtPais)) {
             dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Campos Faltantes",
                     "Por favor llene todos los campos marcados con *", stage);
+            return;
+        }
+
+        if (!ValidationUtils.esEmailValido(txtCorreo.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El correo electrónico no es válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esTelefonoValido(txtTelefono.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El teléfono debe tener 10 dígitos.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtRfc) && !ValidationUtils.esRfcValido(txtRfc.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El RFC no tiene un formato válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtCurp) && !ValidationUtils.esCurpValido(txtCurp.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "La CURP no tiene un formato válido.", stage);
             return;
         }
 
@@ -279,18 +310,19 @@ public class EmpresaView {
         emp.setNombreEmpresa(txtNombre.getText().trim());
         emp.setTelefonoEmpresa(txtTelefono.getText().trim());
         emp.setCorreoEmpresa(txtCorreo.getText().trim());
-        emp.setRfcEmpresa(esVacio(txtRfc) ? null : txtRfc.getText().trim());
-        emp.setCurp(esVacio(txtCurp) ? null : txtCurp.getText().trim());
+        emp.setRfcEmpresa(ValidationUtils.esVacio(txtRfc) ? null : txtRfc.getText().trim().toUpperCase());
+        emp.setCurp(ValidationUtils.esVacio(txtCurp) ? null : txtCurp.getText().trim().toUpperCase());
 
         try {
             emp.setCpEmpresa(Integer.parseInt(txtCp.getText().trim()));
             emp.setNoExtEmpresa(Integer.parseInt(txtNoExt.getText().trim()));
-            emp.setNoIntEmpresa(esVacio(txtNoInt) ? 0 : Integer.parseInt(txtNoInt.getText().trim()));
-        } catch (NumberFormatException ex) {
+        } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
-                    "CP, No. Ext y No. Int deben ser números válidos.", stage);
+                    "El CP y el No. Exterior deben ser números válidos.", stage);
             return;
         }
+
+        emp.setNoIntEmpresa(ValidationUtils.esVacio(txtNoInt) ? null : txtNoInt.getText().trim());
 
         emp.setCalle(txtCalle.getText().trim());
         emp.setColonia(txtColonia.getText().trim());
@@ -375,31 +407,35 @@ public class EmpresaView {
     /**
      * Prepara el formulario para editar una empresa existente
      * 
-     * @param e
+     * @param emp
      */
-    private void prepararEdicion(Empresa e) {
-        this.empresaEnEdicion = e;
-        lblTituloFormulario.setText("Editar Empresa (ID: " + e.getIdEmpresa() + ")");
+    private void prepararEdicion(Empresa emp) {
+        this.empresaEnEdicion = emp;
+        lblTituloFormulario.setText("Editar Empresa (ID: " + emp.getIdEmpresa() + ")");
         btnGuardar.setText("Actualizar Empresa");
-        btnGuardar.setStyle(
-                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
 
-        txtNombre.setText(e.getNombreEmpresa());
-        txtTelefono.setText(e.getTelefonoEmpresa());
-        txtCorreo.setText(e.getCorreoEmpresa());
-        txtCalle.setText(e.getCalle());
-        txtNoExt.setText(String.valueOf(e.getNoExtEmpresa()));
-        txtNoInt.setText(e.getNoIntEmpresa() == 0 ? "" : String.valueOf(e.getNoIntEmpresa()));
-        txtCp.setText(String.valueOf(e.getCpEmpresa()));
-        txtColonia.setText(e.getColonia());
-        txtCiudad.setText(e.getCiudad());
-        txtMunicipio.setText(e.getMunicipio());
-        txtEstado.setText(e.getEstado());
-        txtPais.setText(e.getPais());
-        txtRfc.setText(e.getRfcEmpresa() == null ? "" : e.getRfcEmpresa());
-        txtCurp.setText(e.getCurp() == null ? "" : e.getCurp());
+        String styleBlue = "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        String styleBlueHover = "-fx-background-color: #1D4ED8; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        btnGuardar.setStyle(styleBlue);
+        btnGuardar.setOnMouseEntered(e -> btnGuardar.setStyle(styleBlueHover));
+        btnGuardar.setOnMouseExited(e -> btnGuardar.setStyle(styleBlue));
 
-        if (e.isEsPersonaFisica())
+        txtNombre.setText(emp.getNombreEmpresa());
+        txtTelefono.setText(emp.getTelefonoEmpresa());
+        txtCorreo.setText(emp.getCorreoEmpresa());
+        txtCalle.setText(emp.getCalle());
+        txtNoExt.setText(String.valueOf(emp.getNoExtEmpresa()));
+        txtNoInt.setText(emp.getNoIntEmpresa() == null ? "" : emp.getNoIntEmpresa());
+        txtCp.setText(String.valueOf(emp.getCpEmpresa()));
+        txtColonia.setText(emp.getColonia());
+        txtCiudad.setText(emp.getCiudad());
+        txtMunicipio.setText(emp.getMunicipio());
+        txtEstado.setText(emp.getEstado());
+        txtPais.setText(emp.getPais());
+        txtRfc.setText(emp.getRfcEmpresa() == null ? "" : emp.getRfcEmpresa());
+        txtCurp.setText(emp.getCurp() == null ? "" : emp.getCurp());
+
+        if (emp.isEsPersonaFisica())
             cmbTipoPersona.getSelectionModel().select("Persona Física");
         else
             cmbTipoPersona.getSelectionModel().select("Persona Moral");
@@ -434,7 +470,8 @@ public class EmpresaView {
         grid.add(UIFactory.crearDatoDetalle("Correo:", emp.getCorreoEmpresa()), 1, 0);
 
         String direccion = String.format("%s #%d%s", emp.getCalle(), emp.getNoExtEmpresa(),
-                (emp.getNoIntEmpresa() > 0 ? " Int " + emp.getNoIntEmpresa() : ""));
+                (emp.getNoIntEmpresa() != null && !emp.getNoIntEmpresa().isEmpty() ? " Int " + emp.getNoIntEmpresa()
+                        : ""));
         grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
         grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", emp.getColonia() + " C.P. " + emp.getCpEmpresa()), 1, 1);
         grid.add(UIFactory.crearDatoDetalle("Ciudad/Mun:", emp.getCiudad() + ", " + emp.getMunicipio()), 0, 2);
@@ -453,15 +490,5 @@ public class EmpresaView {
 
         root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
         dialogService.mostrarDialogoModal(dialog, root, stage);
-    }
-
-    /**
-     * Verifica si un TextField está vacío
-     * 
-     * @param tf
-     * @return
-     */
-    private boolean esVacio(TextField tf) {
-        return tf.getText() == null || tf.getText().trim().isEmpty();
     }
 }

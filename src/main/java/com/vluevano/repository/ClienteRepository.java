@@ -13,7 +13,6 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     @Query("SELECT c FROM Cliente c WHERE " +
            "LOWER(c.nombreCliente) LIKE LOWER(CONCAT('%', :filtro, '%')) OR " +
-           "LOWER(c.nombreFiscal) LIKE LOWER(CONCAT('%', :filtro, '%')) OR " +
            "LOWER(c.rfcCliente) LIKE LOWER(CONCAT('%', :filtro, '%')) OR " +
            "LOWER(c.municipio) LIKE LOWER(CONCAT('%', :filtro, '%')) OR " +
            "c.telefonoCliente LIKE %:filtro%")

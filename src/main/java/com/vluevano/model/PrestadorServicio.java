@@ -36,7 +36,7 @@ public class PrestadorServicio {
     private int noExtPrestador;
 
     @Column(name = "nointprestador")
-    private int noIntPrestador;
+    private String noIntPrestador;
 
     @Column(name = "cpprestador")
     private int cpPrestador;

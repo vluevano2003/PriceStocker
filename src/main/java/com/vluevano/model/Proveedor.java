@@ -32,7 +32,7 @@ public class Proveedor {
     private int noExtProv;
 
     @Column(name = "nointprov")
-    private int noIntProv;
+    private String noIntProv;
 
     @Column(name = "cpproveedor")
     private int cpProveedor;

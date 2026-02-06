@@ -3,10 +3,12 @@ package com.vluevano.view;
 import com.vluevano.service.UsuarioService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
+import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -56,6 +58,10 @@ public class MenuPrincipalScreen {
     @Autowired
     @Lazy
     private ProductoView productoView;
+
+    @Autowired
+    @Lazy
+    private PerfilView perfilView;
 
     private Stage stage;
     private BorderPane rootLayout;
@@ -119,7 +125,6 @@ public class MenuPrincipalScreen {
 
     /**
      * Crea el header superior con información del usuario
-     * 
      * @return
      */
     private HBox crearHeader() {
@@ -170,7 +175,17 @@ public class MenuPrincipalScreen {
         border.setStrokeWidth(1);
         avatarContainer.getChildren().add(border);
 
-        header.getChildren().addAll(userInfo, avatarContainer);
+        HBox userSection = new HBox(15, userInfo, avatarContainer);
+        userSection.setAlignment(Pos.CENTER_RIGHT);
+        userSection.setCursor(Cursor.HAND); 
+        
+        Tooltip tp = new Tooltip("Editar mi perfil");
+        Tooltip.install(userSection, tp);
+
+        userSection.setOnMouseClicked(e -> perfilView.show(stage, usuarioActual));
+
+        header.getChildren().add(userSection); 
+        
         return header;
     }
 
@@ -215,7 +230,7 @@ public class MenuPrincipalScreen {
         sidebar.getChildren().add(crearBotonMenu("Proveedores", () -> { proveedorView.show(stage, usuarioActual);}));
         sidebar.getChildren().add(crearBotonMenu("Clientes", () -> clienteView.show(stage, usuarioActual)));
         sidebar.getChildren().add(crearBotonMenu("Fabricantes", () -> fabricanteView.show(stage, usuarioActual)));
-        sidebar.getChildren().add(crearBotonMenu("Empresas Mercado", () -> empresaView.show(stage, usuarioActual)));
+        sidebar.getChildren().add(crearBotonMenu("Competencia del Mercado", () -> empresaView.show(stage, usuarioActual)));
         sidebar.getChildren()
                 .add(crearBotonMenu("Prestadores Servicio", () -> prestadorServicioView.show(stage, usuarioActual)));
 

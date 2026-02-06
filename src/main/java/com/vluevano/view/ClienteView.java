@@ -5,6 +5,8 @@ import com.vluevano.service.ClienteService;
 import com.vluevano.service.DialogService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
+import com.vluevano.util.ValidationUtils;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -77,6 +79,7 @@ public class ClienteView {
         root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
         root.setTop(UIFactory.crearHeader("Gestión de Clientes",
+                "Administra los clientes a los que se les vende productos de forma regular",
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenidoCentral = new HBox(30);
@@ -115,7 +118,11 @@ public class ClienteView {
         tablaClientes = new TableView<>();
         tablaClientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         tablaClientes.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        Label lblVacio = new Label("No hay clientes registrados aún.");
+        lblVacio.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;");
+        tablaClientes.setPlaceholder(lblVacio);
 
         TableColumn<Cliente, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getIdCliente())));
@@ -206,7 +213,7 @@ public class ClienteView {
         txtEstado = UIFactory.crearInput("Ej. CDMX");
         txtPais = UIFactory.crearInput("Ej. México");
         txtRfc = UIFactory.crearInput("Ej. XAXX010101000");
-        txtCurp = UIFactory.crearInput("Ej. CURP");
+        txtCurp = UIFactory.crearInput("Ej. SAMA950520MDFRXX03");
 
         cmbTipoPersona = new ComboBox<>();
         cmbTipoPersona.getItems().addAll("Persona Moral", "Persona Física");
@@ -216,7 +223,7 @@ public class ClienteView {
 
         inputsContainer.getChildren().addAll(
                 UIFactory.crearTituloSeccion("Datos Personales"),
-                UIFactory.crearGrupoInput("Nombre / Razón *", txtNombre),
+                UIFactory.crearGrupoInput("Nombre *", txtNombre),
                 UIFactory.crearGrupoInput("Teléfono *", txtTelefono),
                 UIFactory.crearGrupoInput("Correo *", txtCorreo),
 
@@ -263,35 +270,60 @@ public class ClienteView {
     }
 
     /**
-     * Registra o actualiza un cliente según el estado del formulario
+     * Registra un nuevo cliente o actualiza uno existente
      */
     private void registrarCliente() {
-        if (esVacio(txtNombre) || esVacio(txtTelefono) || esVacio(txtCorreo) ||
-                esVacio(txtCalle) || esVacio(txtNoExt) || esVacio(txtCp) ||
-                esVacio(txtColonia) || esVacio(txtCiudad) || esVacio(txtEstado) || esVacio(txtPais)) {
+        if (ValidationUtils.esVacio(txtNombre) || ValidationUtils.esVacio(txtTelefono)
+                || ValidationUtils.esVacio(txtCorreo) ||
+                ValidationUtils.esVacio(txtCalle) || ValidationUtils.esVacio(txtNoExt) || ValidationUtils.esVacio(txtCp)
+                ||
+                ValidationUtils.esVacio(txtColonia) || ValidationUtils.esVacio(txtCiudad)
+                || ValidationUtils.esVacio(txtEstado) || ValidationUtils.esVacio(txtPais)) {
             dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Campos Faltantes",
                     "Por favor llene todos los campos marcados con *", stage);
+            return;
+        }
+
+        if (!ValidationUtils.esEmailValido(txtCorreo.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El correo electrónico no es válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esTelefonoValido(txtTelefono.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El teléfono debe tener 10 dígitos.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtRfc) && !ValidationUtils.esRfcValido(txtRfc.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "El RFC no tiene un formato válido.", stage);
+            return;
+        }
+        if (!ValidationUtils.esVacio(txtCurp) && !ValidationUtils.esCurpValido(txtCurp.getText().trim())) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Formato Inválido",
+                    "La CURP no tiene un formato válido.", stage);
             return;
         }
 
         Cliente cliente = (clienteEnEdicion != null) ? clienteEnEdicion : new Cliente();
 
         cliente.setNombreCliente(txtNombre.getText().trim());
-        cliente.setNombreFiscal(txtNombre.getText().trim());
         cliente.setTelefonoCliente(txtTelefono.getText().trim());
         cliente.setCorreoCliente(txtCorreo.getText().trim());
-        cliente.setRfcCliente(esVacio(txtRfc) ? null : txtRfc.getText().trim());
-        cliente.setCurp(esVacio(txtCurp) ? null : txtCurp.getText().trim());
+
+        cliente.setRfcCliente(ValidationUtils.esVacio(txtRfc) ? null : txtRfc.getText().trim().toUpperCase());
+        cliente.setCurp(ValidationUtils.esVacio(txtCurp) ? null : txtCurp.getText().trim().toUpperCase());
 
         try {
             cliente.setCpCliente(Integer.parseInt(txtCp.getText().trim()));
             cliente.setNoExtCliente(Integer.parseInt(txtNoExt.getText().trim()));
-            cliente.setNoIntCliente(esVacio(txtNoInt) ? 0 : Integer.parseInt(txtNoInt.getText().trim()));
         } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
-                    "CP, No. Ext y No. Int deben ser números válidos.", stage);
+                    "El CP y el No. Exterior deben ser números válidos.", stage);
             return;
         }
+
+        cliente.setNoIntCliente(ValidationUtils.esVacio(txtNoInt) ? null : txtNoInt.getText().trim());
 
         cliente.setCalle(txtCalle.getText().trim());
         cliente.setColonia(txtColonia.getText().trim());
@@ -325,15 +357,19 @@ public class ClienteView {
         this.clienteEnEdicion = cliente;
         lblTituloFormulario.setText("Editar Cliente (ID: " + cliente.getIdCliente() + ")");
         btnGuardar.setText("Actualizar Cliente");
-        btnGuardar.setStyle(
-                "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        String styleBlue = "-fx-background-color: #2563EB; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        String styleBlueHover = "-fx-background-color: #1D4ED8; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        btnGuardar.setStyle(styleBlue);
+        btnGuardar.setOnMouseEntered(e -> btnGuardar.setStyle(styleBlueHover));
+        btnGuardar.setOnMouseExited(e -> btnGuardar.setStyle(styleBlue));
 
         txtNombre.setText(cliente.getNombreCliente());
         txtTelefono.setText(cliente.getTelefonoCliente());
         txtCorreo.setText(cliente.getCorreoCliente());
         txtCalle.setText(cliente.getCalle());
         txtNoExt.setText(String.valueOf(cliente.getNoExtCliente()));
-        txtNoInt.setText(cliente.getNoIntCliente() == 0 ? "" : String.valueOf(cliente.getNoIntCliente()));
+        txtNoInt.setText(cliente.getNoIntCliente() == null ? "" : cliente.getNoIntCliente());
         txtCp.setText(String.valueOf(cliente.getCpCliente()));
         txtColonia.setText(cliente.getColonia());
         txtCiudad.setText(cliente.getCiudad());
@@ -438,7 +474,7 @@ public class ClienteView {
         grid.add(UIFactory.crearDatoDetalle("Correo:", c.getCorreoCliente()), 1, 0);
 
         String direccion = String.format("%s #%d%s", c.getCalle(), c.getNoExtCliente(),
-                (c.getNoIntCliente() > 0 ? " Int " + c.getNoIntCliente() : ""));
+                (c.getNoIntCliente() != null && !c.getNoIntCliente().isEmpty() ? " Int " + c.getNoIntCliente() : ""));
         grid.add(UIFactory.crearDatoDetalle("Dirección:", direccion), 0, 1);
         grid.add(UIFactory.crearDatoDetalle("Colonia/CP:", c.getColonia() + " C.P. " + c.getCpCliente()), 1, 1);
 
@@ -460,15 +496,5 @@ public class ClienteView {
         root.getChildren().addAll(lblTitulo, lblSub, new Separator(), grid, new Separator(), footer);
 
         dialogService.mostrarDialogoModal(dialog, root, stage);
-    }
-
-    /**
-     * Verifica si un TextField está vacío
-     * 
-     * @param tf
-     * @return
-     */
-    private boolean esVacio(TextField tf) {
-        return tf.getText() == null || tf.getText().trim().isEmpty();
     }
 }

@@ -18,8 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
-
 @Component
 public class UsuarioView {
 
@@ -73,8 +71,7 @@ public class UsuarioView {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
-        root.setTop(UIFactory.crearHeader("Gestión de Usuarios",
-                () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
+        root.setTop(UIFactory.crearHeader("Gestión de Usuarios", "Administra los accesos, roles y contraseñas del sistema", () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenidoCentral = new HBox(30);
         contenidoCentral.setPadding(new Insets(30));
@@ -100,8 +97,11 @@ public class UsuarioView {
         VBox box = new VBox(15);
         tablaUsuarios = new TableView<>();
         tablaUsuarios.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        tablaUsuarios.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #E5E7EB; -fx-font-size: 14px;");
+        tablaUsuarios.setStyle("-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+
+        Label lblVacio = new Label("No hay usuarios registrados aún.");
+        lblVacio.setStyle("-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;");
+        tablaUsuarios.setPlaceholder(lblVacio);
 
         TableColumn<Usuario, Integer> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(data -> new SimpleObjectProperty<>(data.getValue().getIdUsuario()));
@@ -131,32 +131,57 @@ public class UsuarioView {
             }
         });
 
-        TableColumn<Usuario, Void> colAcciones = new TableColumn<>("Acciones");
-        colAcciones.setMinWidth(180);
-        colAcciones.setMaxWidth(180);
+        TableColumn<Usuario, Void> colAcciones = new TableColumn<>("Gestión");
+        colAcciones.setMinWidth(220);
         colAcciones.setCellFactory(param -> new TableCell<>() {
-            private final Button btnEditar = UIFactory
-                    .crearBotonTablaEditar(() -> cambiarContraseña(getTableView().getItems().get(getIndex())));
-
-            private final Button btnEliminar = UIFactory
-                    .crearBotonTablaEliminar(() -> eliminarUsuario(getTableView().getItems().get(getIndex())));
-
-            private final HBox pane = new HBox(8, btnEditar, btnEliminar);
+            
+            private final Button btnPermiso = new Button();
+            private final Button btnEliminar = UIFactory.crearBotonTablaEliminar(() -> eliminarUsuario(getTableView().getItems().get(getIndex())));
             {
-                pane.setAlignment(Pos.CENTER);
+                btnPermiso.setStyle("-fx-background-color: white; -fx-border-color: #D1D5DB; -fx-border-radius: 4; -fx-text-fill: #374151; -fx-font-size: 11px; -fx-cursor: hand;");
+                btnPermiso.setOnAction(e -> togglePermiso(getTableView().getItems().get(getIndex())));
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : pane);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    Usuario u = getTableView().getItems().get(getIndex());
+                    if (u.isPermiso()) {
+                        btnPermiso.setText("Revocar Admin");
+                    } else {
+                        btnPermiso.setText("Hacer Admin");
+                    }
+                    HBox pane = new HBox(8, btnPermiso, btnEliminar);
+                    pane.setAlignment(Pos.CENTER);
+                    setGraphic(pane);
+                }
             }
         });
-
         tablaUsuarios.getColumns().addAll(colId, colNombre, colRol, colAcciones);
         VBox.setVgrow(tablaUsuarios, Priority.ALWAYS);
         box.getChildren().add(tablaUsuarios);
         return box;
+    }
+
+    /**
+     * Cambia el permiso de administrador de un usuario
+     * @param u
+     */
+    private void togglePermiso(Usuario u) {
+        if (u.getNombreUsuario().equals(this.usuarioActual)) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Acción denegada", "No puedes quitarte tus propios permisos de administrador.", stage);
+            return;
+        }
+        boolean nuevoEstado = !u.isPermiso();
+        String accion = nuevoEstado ? "dar permisos de Administrador" : "quitar permisos de Administrador";
+        
+        if (dialogService.mostrarConfirmacion("Confirmar cambio de rol", "¿Estás seguro de " + accion + " al usuario " + u.getNombreUsuario() + "?", stage)) {
+            usuarioService.actualizarPermiso(u.getIdUsuario(), nuevoEstado);
+            cargarUsuarios();
+        }
     }
 
     /**
@@ -249,70 +274,6 @@ public class UsuarioView {
             else
                 dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo eliminar el usuario.", stage);
         }
-    }
-
-    /**
-     * Muestra el pop-up para cambiar la contraseña de un usuario
-     * 
-     * @param user
-     */
-    private void cambiarContraseña(Usuario user) {
-        Optional<String> newPass = mostrarPopUpCambiarContraseña(user);
-        newPass.ifPresent(pass -> {
-            if (pass.length() < 6) {
-                dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Contraseña insegura",
-                        "La contraseña debe tener al menos 6 caracteres.", stage);
-            } else {
-                if (usuarioService.cambiarContrasena(user.getIdUsuario(), pass)) {
-                    dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito",
-                            "Contraseña actualizada correctamente.", stage);
-                }
-            }
-        });
-    }
-
-    /**
-     * Muestra el pop-up para cambiar la contraseña de un usuario
-     * 
-     * @param user
-     * @return
-     */
-    private Optional<String> mostrarPopUpCambiarContraseña(Usuario user) {
-        Stage dialogStage = new Stage();
-        UIFactory.configurarStageModal(dialogStage, stage);
-
-        VBox root = new VBox(20);
-        root.setPadding(new Insets(25));
-        root.setStyle(AppTheme.STYLE_DIALOG_BG + " -fx-background-radius: 12;");
-        root.setMinWidth(400);
-        root.setMaxWidth(400);
-
-        Label lblTitulo = new Label("Cambiar Contraseña");
-        lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #111827;");
-        Label lblSub = new Label("Usuario: " + user.getNombreUsuario());
-        lblSub.setStyle("-fx-text-fill: #6B7280;");
-
-        PasswordField txtNewPass = new PasswordField();
-        txtNewPass.setPromptText("Nueva contraseña");
-        txtNewPass.setStyle(AppTheme.STYLE_INPUT);
-
-        Button btnCancelar = UIFactory.crearBotonSecundario("Cancelar");
-        Button btnConfirmar = UIFactory.crearBotonPrimario("Actualizar");
-
-        final String[] resultado = new String[1];
-        btnCancelar.setOnAction(e -> dialogStage.close());
-        btnConfirmar.setOnAction(e -> {
-            resultado[0] = txtNewPass.getText();
-            dialogStage.close();
-        });
-
-        HBox botones = new HBox(15, btnCancelar, btnConfirmar);
-        botones.setAlignment(Pos.CENTER_RIGHT);
-
-        root.getChildren().addAll(lblTitulo, lblSub, txtNewPass, botones);
-        dialogService.mostrarDialogoModal(dialogStage, root, stage);
-
-        return Optional.ofNullable(resultado[0]);
     }
 
     /**

@@ -16,7 +16,7 @@ public class UsuarioService {
     private UsuarioRepository usuarioRepository;
 
     /**
-     * 1. INICIAR SESIÓN
+     * INICIAR SESIÓN
      * @param nombreUsuario
      * @param contrasena
      * @return
@@ -26,7 +26,7 @@ public class UsuarioService {
     }
 
     /**
-     * 2. CONSULTAR USUARIOS
+     * CONSULTAR USUARIOS
      * @return
      */
     public List<Usuario> consultarUsuarios() {
@@ -34,7 +34,7 @@ public class UsuarioService {
     }
 
     /**
-     * 3. REGISTRAR USUARIO
+     * REGISTRAR USUARIO
      * @param usuario
      * @return
      */
@@ -54,7 +54,7 @@ public class UsuarioService {
     }
 
     /**
-     * 4. CAMBIAR CONTRASEÑA
+     * CAMBIAR CONTRASEÑA
      * @param idUsuario
      * @param nuevaContrasena
      * @return
@@ -72,7 +72,7 @@ public class UsuarioService {
     }
 
     /**
-     * 5. ELIMINAR USUARIO
+     * ELIMINAR USUARIO
      * @param idUsuario
      * @return
      */
@@ -86,7 +86,7 @@ public class UsuarioService {
     }
 
     /**
-     * 6. VERIFICAR PERMISO DE USUARIO
+     * VERIFICAR PERMISO DE USUARIO
      * @param nombreUsuario
      * @return
      */
@@ -94,5 +94,70 @@ public class UsuarioService {
         return usuarioRepository.findByNombreUsuario(nombreUsuario)
                 .map(Usuario::isPermiso)
                 .orElse(false);
+    }
+
+    @Transactional
+    public boolean actualizarPermiso(int idUsuario, boolean nuevoPermiso) {
+        Optional<Usuario> opt = usuarioRepository.findById(idUsuario);
+        if (opt.isPresent()) {
+            Usuario u = opt.get();
+            u.setPermiso(nuevoPermiso);
+            usuarioRepository.save(u);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * ACTUALIZAR PERFIL
+     * @param usuarioActual
+     * @param nuevoNombre
+     * @param nuevaContrasena
+     * @return
+     */
+    @Transactional
+    public String actualizarPerfil(String usuarioActual, String nuevoNombre, String nuevaContrasena) {
+        Optional<Usuario> opt = usuarioRepository.findByNombreUsuario(usuarioActual);
+        
+        if (opt.isPresent()) {
+            Usuario u = opt.get();
+            boolean huboCambios = false;
+
+            if (nuevoNombre == null || nuevoNombre.trim().isEmpty()) {
+                return "El nombre de usuario no puede estar vacío.";
+            }
+            if (!usuarioActual.equals(nuevoNombre)) {
+                if (usuarioRepository.existsByNombreUsuario(nuevoNombre)) {
+                    return "El nombre de usuario ya está en uso por otra persona.";
+                }
+                u.setNombreUsuario(nuevoNombre);
+                huboCambios = true;
+            }
+            if (nuevaContrasena != null && !nuevaContrasena.trim().isEmpty()) {
+                if (nuevaContrasena.length() < 6) {
+                    return "La nueva contraseña debe tener al menos 6 caracteres.";
+                }
+                u.setContrasenaUsuario(nuevaContrasena);
+                huboCambios = true;
+            }
+
+            if (huboCambios) {
+                usuarioRepository.save(u);
+                return "Perfil actualizado exitosamente.";
+            } else {
+                return "No se detectaron cambios para guardar.";
+            }
+        }
+        return "Usuario no encontrado (Error de sesión).";
+    }
+    
+
+    /**
+     * OBTENER ID DE USUARIO POR NOMBRE
+     * @param nombre
+     * @return
+     */
+    public Integer obtenerIdPorNombre(String nombre) {
+        return usuarioRepository.findByNombreUsuario(nombre).map(Usuario::getIdUsuario).orElse(null);
     }
 }

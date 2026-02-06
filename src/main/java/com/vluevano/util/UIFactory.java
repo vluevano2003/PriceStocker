@@ -3,9 +3,6 @@ package com.vluevano.util;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -89,30 +86,34 @@ public class UIFactory {
     }
 
     /**
-     * Crea un header estilizado con título y botón de volver
-     * 
+     * Crea un header estilizado con título, subtítulo y botón de volver
      * @param titulo
+     * @param subtitulo
      * @param accionVolver
      * @return
      */
-    public static HBox crearHeader(String titulo, Runnable accionVolver) {
+    public static HBox crearHeader(String titulo, String subtitulo, Runnable accionVolver) {
         HBox header = new HBox(20);
         header.setPadding(new Insets(20, 40, 20, 40));
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setStyle(
-                "-fx-background-color: #111827; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);");
+        header.setStyle("-fx-background-color: #111827; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);");
 
         Label lblTitulo = new Label(titulo);
-        lblTitulo.setStyle(
-                "-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: white;");
+        lblTitulo.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: white;");
+
+        Label lblSubtitulo = new Label(subtitulo);
+        lblSubtitulo.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-text-fill: #e0e0e0;");
+
+        VBox textosContainer = new VBox(2, lblTitulo, lblSubtitulo);
+        textosContainer.setAlignment(Pos.CENTER_LEFT);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button btnVolver = crearBotonSecundario("Volver al Menú");
         btnVolver.setOnAction(e -> accionVolver.run());
-
-        header.getChildren().addAll(lblTitulo, spacer, btnVolver);
+        
+        header.getChildren().addAll(textosContainer, spacer, btnVolver);
         return header;
     }
 
@@ -227,8 +228,7 @@ public class UIFactory {
         table.setItems(items);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setPrefHeight(150);
-        table.setStyle("-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
-        table.setPlaceholder(new Label("Sin registros asignados"));
+        table.setStyle("-fx-base: #202020; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
 
         TableColumn<T, String> col1 = new TableColumn<>(tituloCol1);
         col1.setCellValueFactory(d -> new SimpleStringProperty(valCol1.apply(d.getValue())));

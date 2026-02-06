@@ -32,7 +32,7 @@ public class Fabricante {
     private int noExtFabricante;
 
     @Column(name = "nointfabricante")
-    private int noIntFabricante;
+    private String noIntFabricante;
 
     @Column(name = "cpfabricante")
     private int cpFabricante;
