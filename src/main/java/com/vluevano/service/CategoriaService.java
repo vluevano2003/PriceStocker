@@ -16,6 +16,4 @@ public class CategoriaService {
     public List<Categoria> consultarCategorias() {
         return categoriaRepository.findAll();
     }
-    
-    // Aquí puedes agregar métodos para guardar/editar categorías si lo requieres
 }
