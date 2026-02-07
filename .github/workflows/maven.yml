@@ -1,0 +1,38 @@
+name: Java CI with Maven
+
+on:
+  push:
+    branches: ["main", "master", "dev-victor"]
+  pull_request:
+    branches: ["main", "master", "dev-victor"]
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarga tu código del repositorio
+      - uses: actions/checkout@v4
+
+      # 2. Instala Java 21 en el servidor de prueba
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      # 3. Ejecuta los tests
+      - name: Run Tests with Maven
+        run: mvn -B test --file pom.xml
+
+      # Reporte de tests
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: success() || failure()
+        with:
+          report_paths: "**/target/surefire-reports/TEST-*.xml"

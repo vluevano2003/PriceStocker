@@ -1,48 +1,28 @@
 package com.vluevano.model;
 
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+@Entity
+@Table(name = "categoria")
+@Data @NoArgsConstructor @AllArgsConstructor
 public class Categoria {
-    private int idCategoria;
-    private String nombreCategoria;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idcategoria")
+    private Integer idCategoria;
+
+    @Column(name = "nombrecategoria", unique = true, nullable = false)
+    private String nombreCategoria; 
+
+    @Column(name = "desccategoria")
     private String descripcionCategoria;
-
-    public Categoria(int idCategoria, String nombreCategoria, String descripcionCategoria) {
-        this.idCategoria = idCategoria;
-        this.nombreCategoria = nombreCategoria;
-        this.descripcionCategoria = descripcionCategoria;
-    }
-
-    public Categoria(int idCategoria, String nombreCategoria) {
-        this.idCategoria = idCategoria;
-        this.nombreCategoria = nombreCategoria;
-    }
 
     @Override
     public String toString() {
         return nombreCategoria;
-    }
-
-    // Getters y setters
-    public int getIdCategoria() {
-        return idCategoria;
-    }
-
-    public void setIdCategoria(int idCategoria) {
-        this.idCategoria = idCategoria;
-    }
-
-    public String getNombreCategoria() {
-        return nombreCategoria;
-    }
-
-    public void setNombreCategoria(String nombreCategoria) {
-        this.nombreCategoria = nombreCategoria;
-    }
-
-    public String getDescripcionCategoria() {
-        return descripcionCategoria;
-    }
-
-    public void setDescripcionCategoria(String descripcionCategoria) {
-        this.descripcionCategoria = descripcionCategoria;
     }
 }

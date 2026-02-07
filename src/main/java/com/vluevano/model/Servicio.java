@@ -1,71 +1,44 @@
 package com.vluevano.model;
 
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.ToString;
+
+@Entity
+@Table(name = "servicio")
+@Data
 public class Servicio {
-    private int idServicio;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idservicio")
+    private Integer idServicio;
+
+    @Column(name = "descripcionservicio")
     private String descripcionServicio;
+
+    @Column(name = "costoservicio")
     private double costoServicio;
+
+    @Column(name = "monedaservicio")
     private String monedaServicio;
 
-    public Servicio(int idServicio, String descripcionServicio, double costoServicio, String monedaServicio) {
-        this.idServicio = idServicio;
-        this.descripcionServicio = descripcionServicio;
-        this.costoServicio = costoServicio;
-        this.monedaServicio = monedaServicio;
-    }
+    @ManyToOne
+    @JoinColumn(name = "idprestador")
+    @ToString.Exclude
+    private PrestadorServicio prestador;
 
     public Servicio() {
     }
 
-
-    public Servicio(int idServicio, String descripcionServicio, double costoServicio) {
-        this.idServicio = idServicio;
-        this.descripcionServicio = descripcionServicio;
-        this.costoServicio = costoServicio;
-    }
-
-    public Servicio(String descripcionServicio) {
-        this.descripcionServicio = descripcionServicio;
-    }
-
-    public Servicio(int idServicio2, String descripcionServicio2) {
-        this.idServicio = idServicio2;
-        this.descripcionServicio = descripcionServicio2;
-    }
-
-    public int getIdServicio() {
-        return idServicio;
-    }
-
-    public void setIdServicio(int idServicio) {
-        this.idServicio = idServicio;
-    }
-
-    public String getDescripcionServicio() {
-        return descripcionServicio;
-    }
-
-    public void setDescripcionServicio(String descripcionServicio) {
-        this.descripcionServicio = descripcionServicio;
-    }
-
-    public double getCostoServicio() {
-        return costoServicio;
-    }
-
-    public void setCostoServicio(double costoServicio) {
-        this.costoServicio = costoServicio;
-    }
-
-    public String getMonedaServicio() {
-        return monedaServicio;
-    }
-
-    public void setMonedaServicio(String monedaServicio) {
-        this.monedaServicio = monedaServicio;
+    public Servicio(String descripcion, double costo, String moneda) {
+        this.descripcionServicio = descripcion;
+        this.costoServicio = costo;
+        this.monedaServicio = moneda;
     }
 
     @Override
     public String toString() {
-        return this.descripcionServicio;
+        return String.format("%s - $%.2f %s", descripcionServicio, costoServicio, monedaServicio);
     }
 }
