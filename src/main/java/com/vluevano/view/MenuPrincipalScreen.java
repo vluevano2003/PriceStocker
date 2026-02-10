@@ -1,6 +1,8 @@
 package com.vluevano.view;
 
 import com.vluevano.service.UsuarioService;
+
+import javafx.animation.TranslateTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -17,6 +19,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -63,9 +67,24 @@ public class MenuPrincipalScreen {
     @Lazy
     private PerfilView perfilView;
 
+    @Autowired
+    @Lazy
+    private VentaView ventaView;
+
+    @Autowired
+    @Lazy
+    private CompraView compraView;
+
     private Stage stage;
     private BorderPane rootLayout;
     private String usuarioActual;
+
+    private Button btnFabMain;
+    private Button btnFabVenta;
+    private Button btnFabCompra;
+    private VBox fabContainer;
+    private boolean menuFabAbierto = false;
+    private Region overlayOscuro;
 
     // Colores y estilos
     private static final String COLOR_PRIMARY = "#F97316";
@@ -111,16 +130,29 @@ public class MenuPrincipalScreen {
      * Inicializa los componentes principales de la interfaz
      */
     private void inicializarComponentes() {
-        rootLayout = new BorderPane();
-
-        VBox sidebar = crearSidebar();
-        rootLayout.setLeft(sidebar);
-
+        StackPane rootStack = new StackPane();
+        
+        BorderPane mainLayout = new BorderPane();
+        mainLayout.setLeft(crearSidebar());
+        
         BorderPane contentPane = new BorderPane();
         contentPane.setTop(crearHeader());
         contentPane.setCenter(crearPantallaBienvenida());
+        mainLayout.setCenter(contentPane);
+        
+        overlayOscuro = new Region();
+        overlayOscuro.setStyle("-fx-background-color: rgba(0,0,0,0.4);");
+        overlayOscuro.setVisible(false);
+        overlayOscuro.setOnMouseClicked(e -> toggleFabMenu());
 
-        rootLayout.setCenter(contentPane);
+        crearBotonesFlotantes();
+
+        rootStack.getChildren().addAll(mainLayout, overlayOscuro, fabContainer);
+        StackPane.setAlignment(fabContainer, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(fabContainer, new Insets(0, 30, 30, 0));
+
+        this.rootLayout = new BorderPane();
+        this.rootLayout.setCenter(rootStack); 
     }
 
     /**
@@ -371,6 +403,95 @@ public class MenuPrincipalScreen {
 
         btn.setOnAction(e -> cerrarSesion());
         return btn;
+    }
+
+    /**
+     * Crea los botones flotantes para registrar nuevas ventas y compras
+     */
+    private void crearBotonesFlotantes() {
+        String styleMiniFab = "-fx-background-color: white; -fx-text-fill: #111827; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 50; -fx-min-height: 50; -fx-max-width: 50; -fx-max-height: 50; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 6, 0, 0, 2); -fx-cursor: hand;";
+        
+        // Botón Compra
+        btnFabCompra = new Button("C"); 
+        btnFabCompra.setTooltip(new Tooltip("Registrar Compra"));
+        btnFabCompra.setStyle(styleMiniFab);
+        btnFabCompra.setVisible(false);
+        btnFabCompra.setOnAction(e -> { toggleFabMenu(); compraView.show(stage, usuarioActual); });
+
+        // Botón Venta
+        btnFabVenta = new Button("V");
+        btnFabVenta.setTooltip(new Tooltip("Registrar Venta"));
+        btnFabVenta.setStyle(styleMiniFab);
+        btnFabVenta.setVisible(false);
+        btnFabVenta.setOnAction(e -> { toggleFabMenu(); ventaView.show(stage, usuarioActual); });
+
+        Label lblCompra = new Label("Nueva Compra");
+        lblCompra.setStyle("-fx-text-fill: white; -fx-background-color: #111827; -fx-padding: 5 10 5 10; -fx-background-radius: 5;");
+        lblCompra.setVisible(false);
+
+        Label lblVenta = new Label("Nueva Venta");
+        lblVenta.setStyle("-fx-text-fill: white; -fx-background-color: #111827; -fx-padding: 5 10 5 10; -fx-background-radius: 5;");
+        lblVenta.setVisible(false);
+
+        HBox rowCompra = new HBox(10, lblCompra, btnFabCompra);
+        rowCompra.setAlignment(Pos.CENTER_RIGHT);
+        
+        HBox rowVenta = new HBox(10, lblVenta, btnFabVenta);
+        rowVenta.setAlignment(Pos.CENTER_RIGHT);
+
+        // Botón Principal
+        btnFabMain = new Button("+");
+        btnFabMain.setStyle("-fx-background-color: " + COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
+        btnFabMain.setOnAction(e -> toggleFabMenu());
+
+        fabContainer = new VBox(15, rowCompra, rowVenta, btnFabMain);
+        fabContainer.setAlignment(Pos.BOTTOM_RIGHT);
+        fabContainer.setPickOnBounds(false); 
+    }
+
+    /**
+     * Muestra las opciones del botón flotante
+     */
+    private void toggleFabMenu() {
+        menuFabAbierto = !menuFabAbierto;
+        
+        if (menuFabAbierto) {
+            // Abrir
+            overlayOscuro.setVisible(true);
+            mostrarMiniFab(btnFabVenta, ((HBox)btnFabVenta.getParent()).getChildren().get(0)); // Botón y Label
+            mostrarMiniFab(btnFabCompra, ((HBox)btnFabCompra.getParent()).getChildren().get(0));
+            
+            btnFabMain.setText("-");
+            btnFabMain.setStyle("-fx-background-color: #4B5563; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
+        
+        } else {
+            // Cerrar
+            overlayOscuro.setVisible(false);
+            ocultarMiniFab(btnFabVenta, ((HBox)btnFabVenta.getParent()).getChildren().get(0));
+            ocultarMiniFab(btnFabCompra, ((HBox)btnFabCompra.getParent()).getChildren().get(0));
+            
+            btnFabMain.setText("+");
+            btnFabMain.setStyle("-fx-background-color: " + COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
+        }
+    }
+
+    private void mostrarMiniFab(Button btn, javafx.scene.Node lbl) {
+        btn.setVisible(true);
+        lbl.setVisible(true);
+        TranslateTransition tt = new TranslateTransition(Duration.millis(200), btn);
+        tt.setFromY(20);
+        tt.setToY(0);
+        tt.play();
+    }
+
+    /**
+     * Oculta las opciones del botón flotante
+     * @param btn
+     * @param lbl
+     */
+    private void ocultarMiniFab(Button btn, javafx.scene.Node lbl) {
+        btn.setVisible(false);
+        lbl.setVisible(false);
     }
 
     /**
