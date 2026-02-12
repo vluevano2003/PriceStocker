@@ -125,7 +125,8 @@ CREATE TABLE producto (
     nombreproducto VARCHAR(100) NOT NULL,
     fichaproducto TEXT,
     alternoproducto VARCHAR(100),
-    existenciaproducto INT DEFAULT 0
+    existenciaproducto INT DEFAULT 0,
+    precioproducto DOUBLE PRECISION DEFAULT 0.0
 );
 
 CREATE TABLE servicio (
