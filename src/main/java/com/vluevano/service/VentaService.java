@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -104,5 +105,17 @@ public class VentaService {
             e.printStackTrace();
             throw new RuntimeException("Error en venta: " + e.getMessage());
         }
+    }
+
+    /**
+     * Obtiene las ventas realizadas en un rango de fechas específico
+     * @param fechaInicio
+     * @param fechaFin
+     * @return
+     */
+    public List<Venta> obtenerVentasPorRango(LocalDate fechaInicio, LocalDate fechaFin) {
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(23, 59, 59);
+        return ventaRepository.findByFechaVentaBetween(inicio, fin);
     }
 }

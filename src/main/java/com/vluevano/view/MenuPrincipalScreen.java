@@ -75,6 +75,14 @@ public class MenuPrincipalScreen {
     @Lazy
     private CompraView compraView;
 
+    @Autowired
+    @Lazy
+    private HistorialVentasView historialVentasView;
+
+    @Autowired
+    @Lazy
+    private HistorialComprasView historialComprasView;
+
     private Stage stage;
     private BorderPane rootLayout;
     private String usuarioActual;
@@ -254,8 +262,22 @@ public class MenuPrincipalScreen {
         }));
 
         Region spacer1 = new Region();
-        spacer1.setPrefHeight(15);
+        spacer1.setPrefHeight(10);
         sidebar.getChildren().add(spacer1);
+
+        sidebar.getChildren().add(crearTituloSeccion("HISTORIAL"));
+
+        sidebar.getChildren().add(crearBotonMenu("Historial de Ventas", () -> {
+            historialVentasView.show(stage, usuarioActual);
+        }));
+        
+        sidebar.getChildren().add(crearBotonMenu("Historial de Compras", () -> {
+            historialComprasView.show(stage, usuarioActual);
+        }));
+
+        Region spacer2 = new Region();
+        spacer2.setPrefHeight(10);
+        sidebar.getChildren().add(spacer2);
 
         // DIRECTORIO
         sidebar.getChildren().add(crearTituloSeccion("DIRECTORIO"));
@@ -269,7 +291,7 @@ public class MenuPrincipalScreen {
         // ADMIN
         if (usuarioService.tienePermiso(usuarioActual)) {
             Region spacerAdmin = new Region();
-            spacerAdmin.setPrefHeight(15);
+            spacerAdmin.setPrefHeight(10);
             sidebar.getChildren().add(spacerAdmin);
             sidebar.getChildren().add(crearTituloSeccion("ADMINISTRACIÓN"));
             Button btnAdmin = crearBotonMenu("Gestión de Usuarios", () -> {
@@ -447,6 +469,9 @@ public class MenuPrincipalScreen {
         fabContainer = new VBox(15, rowCompra, rowVenta, btnFabMain);
         fabContainer.setAlignment(Pos.BOTTOM_RIGHT);
         fabContainer.setPickOnBounds(false); 
+        rowCompra.setPickOnBounds(false);
+        rowVenta.setPickOnBounds(false);
+        fabContainer.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
     }
 
     /**

@@ -71,7 +71,7 @@ public class CompraView {
         });
 
         BorderPane root = new BorderPane();
-        root.setTop(UIFactory.crearHeader("Nueva Compra", "Entrada de mercancía a inventario",
+        root.setTop(UIFactory.crearHeader("Nueva Compra", "Registro de entrada de mercancía",
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
         HBox contenido = new HBox(20);
