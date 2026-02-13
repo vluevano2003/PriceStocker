@@ -14,7 +14,7 @@ public class UpdateService {
     private static final String GITHUB_USER = "vluevano"; 
     private static final String GITHUB_REPO = "pricestocker";
     
-    private static final String VERSION_ACTUAL = "v1.0.0"; 
+    private static final String VERSION_ACTUAL = "v1.1.0";
 
     /**
      * Este método busca actualizaciones en GitHub y, si encuentra una versión más nueva, la descarga e instala
