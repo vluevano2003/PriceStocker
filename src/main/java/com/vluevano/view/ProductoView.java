@@ -554,7 +554,14 @@ public class ProductoView {
         } else {
             ComboBox<Servicio> cmb = new ComboBox<>();
             cmb.setItems(FXCollections.observableArrayList(lista));
-            configurarCombo(cmb, Servicio::getDescripcionServicio);
+            configurarCombo(cmb, s -> {
+                String desc = s.getDescripcionServicio();
+                String prestador = "Sin Asignar";
+                if (s.getPrestador() != null) {
+                    prestador = s.getPrestador().getNombrePrestador();
+                }
+                return desc + " (" + prestador + ")";
+            });
             cmb.setMaxWidth(Double.MAX_VALUE);
             cmb.setPromptText("Seleccionar Servicio");
 

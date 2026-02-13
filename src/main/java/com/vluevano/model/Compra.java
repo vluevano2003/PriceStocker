@@ -3,6 +3,7 @@ package com.vluevano.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "compra")
@@ -29,4 +30,7 @@ public class Compra {
 
     @Column(name = "total_compra")
     private Double totalCompra;
+
+    @OneToMany(mappedBy = "compra", fetch = FetchType.EAGER)
+    private List<DetalleCompra> detalles;
 }
