@@ -119,6 +119,21 @@ public class PrestadorServicioView {
         topBar.setAlignment(Pos.CENTER_LEFT);
 
         tablaPrestadores = new TableView<>();
+
+        String estiloThumb = "data:text/css," +
+                ".scroll-bar:vertical .thumb {" +
+                "    -fx-background-color: #DADADA;" +
+                "    -fx-background-insets: 0 4 0 4;" + 
+                "    -fx-background-radius: 4;" + 
+                "}" +
+                ".scroll-bar:horizontal .thumb {" +
+                "    -fx-background-color: #DADADA;" +
+                "    -fx-background-insets: 4 0 4 0;" +
+                "    -fx-background-radius: 4;" +
+                "}";
+                
+        tablaPrestadores.getStylesheets().add(estiloThumb);
+
         tablaPrestadores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         tablaPrestadores.setStyle(

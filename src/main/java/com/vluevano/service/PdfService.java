@@ -1,0 +1,327 @@
+package com.vluevano.service;
+
+import com.lowagie.text.*;
+import com.lowagie.text.pdf.*;
+import com.vluevano.model.Compra;
+import com.vluevano.model.Venta;
+import org.springframework.stereotype.Service;
+
+import java.awt.Color;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class PdfService {
+
+    private static final Color COLOR_PRIMARY = new Color(249, 115, 22);
+    private static final Color COLOR_DARK_TEXT = new Color(17, 24, 39);
+    private static final Color COLOR_BORDER = new Color(229, 231, 235);
+
+    private static final Font FONT_BRAND_LOGO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, COLOR_DARK_TEXT);
+    private static final Font FONT_BRAND_DOT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 24, COLOR_PRIMARY);
+    private static final Font FONT_SUBTITLE = FontFactory.getFont(FontFactory.HELVETICA, 10, new Color(107, 114, 128));
+    private static final Font FONT_HEADER_TABLE = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
+    private static final Font FONT_DATA_TABLE = FontFactory.getFont(FontFactory.HELVETICA, 9, COLOR_DARK_TEXT);
+    private static final Font FONT_TOTAL = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COLOR_PRIMARY);
+    private static final Font FONT_DATA_SMALL = FontFactory.getFont(FontFactory.HELVETICA, 8, new Color(55, 65, 81));
+
+    /**
+     * Genera un reporte PDF de ventas con estilo moderno y profesional
+     * 
+     * @param archivo
+     * @param listaVentas
+     * @param rangoFechas
+     * @throws IOException
+     */
+    public void generarReporteVentas(File archivo, List<Venta> listaVentas, String rangoFechas) throws IOException {
+        Document document = new Document(PageSize.A4.rotate(), 20, 20, 30, 30);
+        try {
+            PdfWriter.getInstance(document, new FileOutputStream(archivo));
+            document.open();
+
+            agregarEncabezadoMarca(document, "REPORTE DE VENTAS", rangoFechas);
+
+            PdfPTable table = new PdfPTable(6);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[] { 1f, 1.5f, 4.5f, 2f, 1.5f, 1.5f });
+            table.setSpacingBefore(20);
+
+            agregarCeldaEncabezado(table, "ID");
+            agregarCeldaEncabezado(table, "FECHA");
+            agregarCeldaEncabezado(table, "PRODUCTOS");
+            agregarCeldaEncabezado(table, "CLIENTE");
+            agregarCeldaEncabezado(table, "VENDEDOR");
+            agregarCeldaEncabezado(table, "TOTAL", Element.ALIGN_RIGHT);
+
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            double granTotal = 0;
+            boolean esPar = false;
+
+            for (Venta v : listaVentas) {
+                Color bgColor = esPar ? new Color(243, 244, 246) : Color.WHITE;
+
+                agregarCeldaDato(table, String.valueOf(v.getIdventa()), Element.ALIGN_CENTER, bgColor);
+                agregarCeldaDato(table, v.getFechaVenta().format(fmt), Element.ALIGN_CENTER, bgColor);
+
+                String detalleProductos = "Sin detalles";
+                if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
+                    detalleProductos = v.getDetalles().stream()
+                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ")")
+                            .collect(Collectors.joining("\n"));
+                }
+                PdfPCell cellProd = new PdfPCell(new Phrase(detalleProductos, FONT_DATA_SMALL));
+                estilizarCeldaDato(cellProd, Element.ALIGN_LEFT, bgColor);
+                table.addCell(cellProd);
+
+                agregarCeldaDato(table, v.getCliente() != null ? v.getCliente().getNombreCliente() : "Público General",
+                        Element.ALIGN_LEFT, bgColor);
+                agregarCeldaDato(table, v.getUsuario().getNombreUsuario(), Element.ALIGN_CENTER, bgColor);
+
+                String totalStr = String.format("$ %,.2f", v.getTotalVenta());
+                agregarCeldaDato(table, totalStr, Element.ALIGN_RIGHT, bgColor);
+
+                granTotal += v.getTotalVenta();
+                esPar = !esPar;
+            }
+            document.add(table);
+            agregarSeccionTotal(document, "Total Ingresos:", granTotal);
+
+        } catch (DocumentException e) {
+            throw new IOException("Error PDF Ventas", e);
+        } finally {
+            document.close();
+        }
+    }
+
+    /**
+     * Genera un reporte PDF de compras con estilo moderno y profesional
+     * 
+     * @param archivo
+     * @param listaCompras
+     * @param rangoFechas
+     * @throws IOException
+     */
+    public void generarReporteCompras(File archivo, List<Compra> listaCompras, String rangoFechas) throws IOException {
+        Document document = new Document(PageSize.A4.rotate(), 20, 20, 30, 30);
+        try {
+            PdfWriter.getInstance(document, new FileOutputStream(archivo));
+            document.open();
+
+            agregarEncabezadoMarca(document, "REPORTE DE COMPRAS", rangoFechas);
+
+            PdfPTable table = new PdfPTable(6);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[] { 1f, 1.5f, 4.5f, 2.5f, 1.5f, 1.5f });
+            table.setSpacingBefore(20);
+
+            agregarCeldaEncabezado(table, "ID");
+            agregarCeldaEncabezado(table, "FECHA");
+            agregarCeldaEncabezado(table, "PRODUCTOS");
+            agregarCeldaEncabezado(table, "ORIGEN");
+            agregarCeldaEncabezado(table, "COMPRADOR");
+            agregarCeldaEncabezado(table, "TOTAL", Element.ALIGN_RIGHT);
+
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            double granTotal = 0;
+            boolean esPar = false;
+
+            for (Compra c : listaCompras) {
+                Color bgColor = esPar ? new Color(243, 244, 246) : Color.WHITE;
+
+                agregarCeldaDato(table, String.valueOf(c.getIdcompra()), Element.ALIGN_CENTER, bgColor);
+                agregarCeldaDato(table, c.getFechaCompra().format(fmt), Element.ALIGN_CENTER, bgColor);
+
+                String detalleProductos = "Sin detalles";
+                if (c.getDetalles() != null && !c.getDetalles().isEmpty()) {
+                    detalleProductos = c.getDetalles().stream()
+                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ")")
+                            .collect(Collectors.joining("\n"));
+                }
+                PdfPCell cellProd = new PdfPCell(new Phrase(detalleProductos, FONT_DATA_SMALL));
+                estilizarCeldaDato(cellProd, Element.ALIGN_LEFT, bgColor);
+                table.addCell(cellProd);
+
+                String origen = "Desconocido";
+                if (c.getProveedor() != null)
+                    origen = "[P] " + c.getProveedor().getNombreProv();
+                else if (c.getFabricante() != null)
+                    origen = "[F] " + c.getFabricante().getNombreFabricante();
+
+                agregarCeldaDato(table, origen, Element.ALIGN_LEFT, bgColor);
+                agregarCeldaDato(table, c.getUsuario().getNombreUsuario(), Element.ALIGN_CENTER, bgColor);
+
+                String totalStr = String.format("$ %,.2f", c.getTotalCompra());
+                agregarCeldaDato(table, totalStr, Element.ALIGN_RIGHT, bgColor);
+
+                granTotal += c.getTotalCompra();
+                esPar = !esPar;
+            }
+            document.add(table);
+            agregarSeccionTotal(document, "Total Egresos:", granTotal);
+
+        } catch (DocumentException e) {
+            throw new IOException("Error PDF Compras", e);
+        } finally {
+            document.close();
+        }
+    }
+
+    /**
+     * Aplica un estilo moderno a una celda de dato, con alineación, color de fondo
+     * y bordes personalizados
+     * 
+     * @param cell
+     * @param alineacion
+     * @param bgColor
+     */
+    private void estilizarCeldaDato(PdfPCell cell, int alineacion, Color bgColor) {
+        cell.setHorizontalAlignment(alineacion);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setBackgroundColor(bgColor);
+        cell.setBorderColor(new Color(229, 231, 235));
+        cell.setBorderWidth(0.5f);
+        cell.setPaddingTop(6);
+        cell.setPaddingBottom(6);
+        cell.setPaddingLeft(4);
+        cell.setPaddingRight(4);
+    }
+
+    /**
+     * Agrega un encabezado con la marca "PriceStocker", el título del reporte y el
+     * rango de fechas
+     * 
+     * @param document
+     * @param tituloReporte
+     * @param rangoFechas
+     * @throws DocumentException
+     */
+    private void agregarEncabezadoMarca(Document document, String tituloReporte, String rangoFechas)
+            throws DocumentException {
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        headerTable.setWidths(new float[] { 1, 1 });
+
+        Paragraph logoPara = new Paragraph();
+        logoPara.add(new Chunk("PRICESTOCKER", FONT_BRAND_LOGO));
+        logoPara.add(new Chunk(".", FONT_BRAND_DOT));
+        PdfPCell cellLogo = new PdfPCell(logoPara);
+        cellLogo.setBorder(Rectangle.NO_BORDER);
+        cellLogo.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        headerTable.addCell(cellLogo);
+
+        Paragraph metaPara = new Paragraph();
+
+        metaPara.add(
+                new Chunk(tituloReporte + "\n", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, COLOR_PRIMARY)));
+        metaPara.add(new Chunk(
+                "Generado: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "\n",
+                FONT_SUBTITLE));
+        metaPara.add(new Chunk("Periodo: " + rangoFechas, FONT_SUBTITLE));
+
+        PdfPCell cellMeta = new PdfPCell(metaPara);
+        cellMeta.setBorder(Rectangle.NO_BORDER);
+        cellMeta.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cellMeta.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        headerTable.addCell(cellMeta);
+
+        document.add(headerTable);
+
+        PdfPTable separator = new PdfPTable(1);
+        separator.setWidthPercentage(100);
+        PdfPCell line = new PdfPCell(new Phrase(" "));
+        line.setBackgroundColor(COLOR_PRIMARY);
+        line.setBorder(Rectangle.NO_BORDER);
+        line.setFixedHeight(2f);
+        separator.addCell(line);
+        separator.setSpacingBefore(10);
+        document.add(separator);
+    }
+
+    /**
+     * Agrega una celda de encabezado a la tabla con estilo moderno
+     * 
+     * @param table
+     * @param texto
+     */
+    private void agregarCeldaEncabezado(PdfPTable table, String texto) {
+        agregarCeldaEncabezado(table, texto, Element.ALIGN_CENTER);
+    }
+
+    /**
+     * Agrega una celda de encabezado a la tabla con estilo moderno y alineación
+     * personalizada
+     * 
+     * @param table
+     * @param texto
+     * @param alineacion
+     */
+    private void agregarCeldaEncabezado(PdfPTable table, String texto, int alineacion) {
+        PdfPCell cell = new PdfPCell(new Phrase(texto, FONT_HEADER_TABLE));
+        cell.setHorizontalAlignment(alineacion);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setBackgroundColor(COLOR_PRIMARY);
+        cell.setBorderColor(COLOR_PRIMARY);
+        cell.setPaddingTop(8);
+        cell.setPaddingBottom(8);
+        cell.setPaddingLeft(6);
+        cell.setPaddingRight(6);
+        table.addCell(cell);
+    }
+
+    /**
+     * Agrega una celda de dato a la tabla con estilo moderno, alineación y color de
+     * fondo personalizados
+     * 
+     * @param table
+     * @param texto
+     * @param alineacion
+     * @param bgColor
+     */
+    private void agregarCeldaDato(PdfPTable table, String texto, int alineacion, Color bgColor) {
+        PdfPCell cell = new PdfPCell(new Phrase(texto, FONT_DATA_TABLE));
+        cell.setHorizontalAlignment(alineacion);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setBackgroundColor(bgColor);
+        cell.setBorderColor(COLOR_BORDER);
+        cell.setBorderWidth(0.5f);
+        cell.setPaddingTop(6);
+        cell.setPaddingBottom(6);
+        cell.setPaddingLeft(4);
+        cell.setPaddingRight(4);
+        table.addCell(cell);
+    }
+
+    /**
+     * Agrega una sección al final del documento para mostrar el total de ingresos o
+     * egresos, con una línea superior y formato destacado
+     * 
+     * @param document
+     * @param etiqueta
+     * @param valor
+     * @throws DocumentException
+     */
+    private void agregarSeccionTotal(Document document, String etiqueta, double valor) throws DocumentException {
+        PdfPTable lineTable = new PdfPTable(1);
+        lineTable.setWidthPercentage(100);
+        PdfPCell line = new PdfPCell(new Phrase(" "));
+        line.setBorder(Rectangle.TOP);
+        line.setBorderColor(COLOR_PRIMARY);
+        line.setBorderWidth(1f);
+        lineTable.addCell(line);
+        lineTable.setSpacingBefore(10);
+        document.add(lineTable);
+        Paragraph pTotal = new Paragraph();
+        pTotal.setAlignment(Element.ALIGN_RIGHT);
+
+        pTotal.add(new Chunk(etiqueta + " ", FontFactory.getFont(FontFactory.HELVETICA, 12, COLOR_DARK_TEXT)));
+
+        pTotal.add(new Chunk(String.format("$ %,.2f", valor), FONT_TOTAL));
+        pTotal.setSpacingBefore(5);
+        document.add(pTotal);
+    }
+}

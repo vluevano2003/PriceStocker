@@ -33,6 +33,9 @@ public class Producto {
     @Column(name = "existenciaproducto")
     private int existenciaProducto;
 
+    @Column(name = "precioproducto")
+    private Double precioProducto;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "productocategoria", joinColumns = @JoinColumn(name = "idproducto"), inverseJoinColumns = @JoinColumn(name = "idcategoria"))
     private List<Categoria> categorias = new ArrayList<>();

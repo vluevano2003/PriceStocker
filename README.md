@@ -14,6 +14,8 @@
 El sistema está diseñado para gestionar el ciclo completo de productos y relaciones comerciales:
 
 * **Control de Acceso:** Sistema de Login seguro con gestión de usuarios y permisos.
+* **Gestión de Movimientos:** Registro completo de **Compras y Ventas** que actualizan automáticamente el **Stock** de los productos en tiempo real.
+* **Reportes:** Generación de reportes detallados de compras y ventas en formato PDF.
 * **Gestión de Productos:** Catálogo detallado con soporte para categorización.
 * **Precios Dinámicos:** Gestión avanzada de costos y precios por tipo de relación (Cliente, Proveedor, Fabricante, Empresa) con soporte para múltiples monedas (MXN/USD).
 * **Gestión de Terceros:** Módulos completos para administrar:
@@ -32,6 +34,7 @@ El sistema está diseñado para gestionar el ciclo completo de productos y relac
 * **Base de Datos:** H2 Database (Embebida, modo archivo `.mv.db`).
 * **Migraciones:** Flyway (Control de versiones de base de datos).
 * **ORM:** Hibernate / Spring Data JPA.
+* **Reportes:** OpenPDF 1.3.30 (Generación de documentos PDF).
 * **JUnit 5:** Framework de pruebas.
 * **Mockito:** Simulación de dependencias (Mocks).
 * **CI/CD:** Configurado con **GitHub Actions** para ejecución automática de pruebas en cada Push/Pull Request.

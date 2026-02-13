@@ -44,7 +44,7 @@ public class ProductoView {
     private String usuarioActual;
     private TableView<Producto> tablaProductos;
     private TextField txtFiltro;
-    private TextField txtNombre, txtFicha, txtAlterno, txtExistencia;
+    private TextField txtNombre, txtFicha, txtAlterno, txtExistencia, txtPrecio;
     private Label lblTituloFormulario;
     private Button btnGuardar;
     private BorderPane contentPanel;
@@ -83,7 +83,8 @@ public class ProductoView {
     }
 
     /**
-     * Crea el contenido principal de la vista
+     * Crea el layout principal de la pantalla de productos, con la tabla a la
+     * izquierda y el formulario a la derecha
      * 
      * @return
      */
@@ -112,7 +113,8 @@ public class ProductoView {
     }
 
     /**
-     * Crea el panel de la tabla de productos
+     * Crea el panel de la tabla de productos, con un buscador en la parte superior
+     * y la tabla debajo
      * 
      * @return
      */
@@ -128,6 +130,21 @@ public class ProductoView {
         topBar.setAlignment(Pos.CENTER_LEFT);
 
         tablaProductos = new TableView<>();
+
+        String estiloThumb = "data:text/css," +
+                ".scroll-bar:vertical .thumb {" +
+                "    -fx-background-color: #DADADA;" +
+                "    -fx-background-insets: 0 4 0 4;" +
+                "    -fx-background-radius: 4;" +
+                "}" +
+                ".scroll-bar:horizontal .thumb {" +
+                "    -fx-background-color: #DADADA;" +
+                "    -fx-background-insets: 4 0 4 0;" +
+                "    -fx-background-radius: 4;" +
+                "}";
+
+        tablaProductos.getStylesheets().add(estiloThumb);
+
         tablaProductos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         tablaProductos.setStyle(
                 "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
@@ -151,6 +168,13 @@ public class ProductoView {
                 d.getValue().getAlternoProducto() != null ? d.getValue().getAlternoProducto() : "---"));
         colAlterno.setMinWidth(100);
         colAlterno.setPrefWidth(120);
+
+        TableColumn<Producto, String> colPrecio = new TableColumn<>("Precio Base");
+        colPrecio.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().getPrecioProducto() != null ? String.format("$%.2f", d.getValue().getPrecioProducto())
+                        : "$0.00"));
+        colPrecio.setMinWidth(90);
+        colPrecio.setMaxWidth(100);
 
         TableColumn<Producto, String> colCategoria = new TableColumn<>("Categoría");
         colCategoria.setCellValueFactory(d -> {
@@ -189,7 +213,7 @@ public class ProductoView {
         });
 
         tablaProductos.getColumns()
-                .addAll(List.of(colId, colNombre, colAlterno, colCategoria, colExistencia, colAcciones));
+                .addAll(List.of(colId, colNombre, colAlterno, colPrecio, colCategoria, colExistencia, colAcciones));
         VBox.setVgrow(tablaProductos, Priority.ALWAYS);
 
         tablaProductos.setOnMouseClicked(event -> {
@@ -203,7 +227,9 @@ public class ProductoView {
     }
 
     /**
-     * Crea el panel del formulario de producto
+     * Crea el panel del formulario para crear o editar un producto, con pestañas
+     * para detalles generales, proveedores, clientes, fabricantes, empresas y
+     * servicios relacionados
      * 
      * @return
      */
@@ -306,27 +332,40 @@ public class ProductoView {
     }
 
     /**
-     * Inicializa los inputs generales del formulario
+     * Inicializa los campos de texto del formulario general, incluyendo validadores
+     * para existencia y precio (solo números)
      */
     private void inicializarInputsGenerales() {
         txtNombre = UIFactory.crearInput("Ej. Monitor LED 24 pulgadas");
         txtFicha = UIFactory.crearInput("Ej. Resolución 1080p, HDMI, Color Negro");
         txtAlterno = UIFactory.crearInput("Ej. MON-24-BLK");
-
         txtExistencia = UIFactory.crearInput("0");
 
-        UnaryOperator<TextFormatter.Change> filter = change -> {
+        txtPrecio = UIFactory.crearInput("0.00");
+
+        UnaryOperator<TextFormatter.Change> filterInt = change -> {
             String text = change.getControlNewText();
             if (text.matches("\\d*")) {
                 return change;
             }
             return null;
         };
-        txtExistencia.setTextFormatter(new TextFormatter<>(filter));
+        txtExistencia.setTextFormatter(new TextFormatter<>(filterInt));
+
+        UnaryOperator<TextFormatter.Change> filterDouble = change -> {
+            String text = change.getControlNewText();
+            if (text.matches("\\d*|\\d+\\.\\d*")) {
+                return change;
+            }
+            return null;
+        };
+        txtPrecio.setTextFormatter(new TextFormatter<>(filterDouble));
     }
 
     /**
-     * Crea un botón de navegación para el formulario
+     * Crea un botón de navegación para el formulario, que al hacer clic muestra la
+     * vista correspondiente en el panel central y actualiza el estilo del botón
+     * activo
      * 
      * @param titulo
      * @param container
@@ -348,7 +387,8 @@ public class ProductoView {
     }
 
     /**
-     * Actualiza el estilo de los botones de navegación
+     * Actualiza el estilo de los botones de navegación para resaltar el botón
+     * activo y dar feedback visual al usuario
      * 
      * @param activo
      */
@@ -371,22 +411,32 @@ public class ProductoView {
     }
 
     /**
-     * Crea la vista general del formulario
+     * Crea la vista general del formulario, con campos para nombre, descripción,
+     * alterno, existencia, precio y selección de categorías
      * 
      * @return
      */
     private VBox crearVistaGeneral() {
+        HBox rowDetails = new HBox(15,
+                UIFactory.crearGrupoInput("Nombre alterno", txtAlterno),
+                UIFactory.crearGrupoInput("Precio Base (Por defecto) *", txtPrecio),
+                UIFactory.crearGrupoInput("Existencia *", txtExistencia));
+        HBox.setHgrow(rowDetails.getChildren().get(0), Priority.ALWAYS);
+        HBox.setHgrow(rowDetails.getChildren().get(1), Priority.ALWAYS);
+        HBox.setHgrow(rowDetails.getChildren().get(2), Priority.ALWAYS);
+
         return new VBox(15,
                 UIFactory.crearGrupoInput("Nombre *", txtNombre),
                 UIFactory.crearGrupoInput("Descripción", txtFicha),
-                new HBox(15,
-                        UIFactory.crearGrupoInput("Nombre alterno", txtAlterno),
-                        UIFactory.crearGrupoInput("Existencia *", txtExistencia)),
+                rowDetails,
                 crearSelectorCategorias());
     }
 
     /**
-     * Crea el selector de categorías
+     * Crea el componente para seleccionar categorías, que incluye un ComboBox para
+     * elegir de las categorías existentes, un campo de texto para crear una nueva
+     * categoría y una lista que muestra las categorías seleccionadas con opción de
+     * eliminar
      * 
      * @return
      */
@@ -487,7 +537,9 @@ public class ProductoView {
     }
 
     /**
-     * Crea el subformulario de servicios
+     * Crea la vista para gestionar los servicios relacionados al producto, con un
+     * ComboBox para seleccionar servicios existentes y una tabla que muestra los
+     * servicios seleccionados con su costo base
      * 
      * @return
      */
@@ -502,7 +554,14 @@ public class ProductoView {
         } else {
             ComboBox<Servicio> cmb = new ComboBox<>();
             cmb.setItems(FXCollections.observableArrayList(lista));
-            configurarCombo(cmb, Servicio::getDescripcionServicio);
+            configurarCombo(cmb, s -> {
+                String desc = s.getDescripcionServicio();
+                String prestador = "Sin Asignar";
+                if (s.getPrestador() != null) {
+                    prestador = s.getPrestador().getNombrePrestador();
+                }
+                return desc + " (" + prestador + ")";
+            });
             cmb.setMaxWidth(Double.MAX_VALUE);
             cmb.setPromptText("Seleccionar Servicio");
 
@@ -529,7 +588,9 @@ public class ProductoView {
     }
 
     /**
-     * Guarda el producto actual (nuevo o editado)
+     * Guarda el producto creado o editado, validando los campos obligatorios y
+     * mostrando mensajes de error o éxito según corresponda. Si la operación es
+     * exitosa, limpia el formulario y recarga la tabla de productos
      */
     private void guardarProducto() {
         if (txtNombre.getText().trim().isEmpty()) {
@@ -547,6 +608,11 @@ public class ProductoView {
                     "La existencia del producto no puede estar vacía.", stage);
             return;
         }
+        if (txtPrecio.getText().trim().isEmpty()) {
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Validación Requerida",
+                    "El precio base no puede estar vacío (puede ser 0).", stage);
+            return;
+        }
 
         Producto p = (productoEnEdicion != null) ? productoEnEdicion : new Producto();
         p.setNombreProducto(txtNombre.getText().trim());
@@ -558,6 +624,14 @@ public class ProductoView {
         } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
                     "La existencia debe ser un número entero válido.", stage);
+            return;
+        }
+
+        try {
+            p.setPrecioProducto(Double.parseDouble(txtPrecio.getText().trim()));
+        } catch (NumberFormatException e) {
+            dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico",
+                    "El precio debe ser un número válido.", stage);
             return;
         }
 
@@ -589,7 +663,8 @@ public class ProductoView {
     }
 
     /**
-     * Prepara el formulario para editar un producto existente
+     * Prepara el formulario para editar un producto existente, cargando sus datos
+     * completos y actualizando el título y el botón de guardar
      * 
      * @param pResumen
      */
@@ -610,7 +685,7 @@ public class ProductoView {
         txtFicha.setText(pFull.getFichaProducto());
         txtAlterno.setText(pFull.getAlternoProducto());
         txtExistencia.setText(String.valueOf(pFull.getExistenciaProducto()));
-
+        txtPrecio.setText(String.valueOf(pFull.getPrecioProducto() != null ? pFull.getPrecioProducto() : "0.00"));
         categoriasSeleccionadas.setAll(pFull.getCategorias());
         proveedoresAgregados.setAll(pFull.getProductoProveedores());
         clientesAgregados.setAll(pFull.getProductoClientes());
@@ -622,7 +697,9 @@ public class ProductoView {
     }
 
     /**
-     * Muestra el detalle completo de un producto en un diálogo modal
+     * Muestra un diálogo con el detalle completo de un producto, incluyendo sus
+     * relaciones con proveedores, clientes, fabricantes, empresas y servicios. La
+     * información se organiza en pestañas para facilitar la navegación
      * 
      * @param p
      */
@@ -707,7 +784,10 @@ public class ProductoView {
     }
 
     /**
-     * Crea el panel de detalles fijos del diálogo de detalle de producto
+     * Crea un panel con los detalles fijos del producto que se muestran en la parte
+     * superior del diálogo de detalle, incluyendo nombre alterno, existencia,
+     * precio y categorías. El estilo de la existencia cambia según si es mayor a 0
+     * o no para dar feedback visual
      * 
      * @param p
      * @return
@@ -727,17 +807,27 @@ public class ProductoView {
         VBox vExistencia = new VBox(2, new Label("Existencia Actual"), lblExistenciaVal);
         vExistencia.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
 
+        Label lblPrecioVal = new Label(
+                String.format("$%.2f", p.getPrecioProducto() != null ? p.getPrecioProducto() : 0.0));
+        lblPrecioVal.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2563EB;");
+        VBox vPrecio = new VBox(2, new Label("Precio Base"), lblPrecioVal);
+        vPrecio.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
+
         String catStr = p.getCategorias().stream().map(Categoria::getNombreCategoria).collect(Collectors.joining(", "));
         VBox vCategorias = UIFactory.crearDatoDetalle("Categorías", catStr.isEmpty() ? "Sin categoría" : catStr);
 
         grid.add(vAlterno, 0, 0);
         grid.add(vExistencia, 1, 0);
-        grid.add(vCategorias, 2, 0);
+        grid.add(vPrecio, 2, 0);
+        grid.add(vCategorias, 3, 0);
         return grid;
     }
 
     /**
-     * Crea un botón para el popup de detalle de producto
+     * Crea un botón para la barra de navegación del diálogo de detalle, que al
+     * hacer clic muestra la vista correspondiente en el área central y actualiza el
+     * estilo del botón activo. Este método es específico para el diálogo de detalle
+     * y utiliza un mapa local de botones para manejar el estado activo
      * 
      * @param titulo
      * @param view
@@ -773,7 +863,10 @@ public class ProductoView {
     }
 
     /**
-     * Elimina un producto después de la confirmación del usuario
+     * Elimina un producto después de confirmar la acción con el usuario. Si la
+     * eliminación es exitosa, recarga la tabla de productos y limpia el formulario
+     * si el producto eliminado estaba en edición. Si ocurre un error, muestra un
+     * mensaje de alerta
      * 
      * @param p
      */
@@ -792,19 +885,29 @@ public class ProductoView {
     }
 
     /**
-     * Limpia el formulario y lo prepara para un nuevo producto
+     * Limpia el formulario de creación/edición, reseteando todos los campos a su
+     * estado inicial, limpiando las listas de relaciones y actualizando el título y
+     * el botón de guardar para reflejar que se está creando un nuevo producto.
+     * También vuelve a la vista general del formulario
      */
     private void limpiarFormulario() {
         productoEnEdicion = null;
         lblTituloFormulario.setText("Nuevo Producto");
         btnGuardar.setText("Guardar Producto");
-        btnGuardar.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY
-                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;");
+        
+        String stylePrimary = "-fx-background-color: " + AppTheme.COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+        String stylePrimaryHover = "-fx-background-color: " + AppTheme.COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand; -fx-opacity: 0.9;";
+
+        btnGuardar.setStyle(stylePrimary);
+
+        btnGuardar.setOnMouseEntered(e -> btnGuardar.setStyle(stylePrimaryHover));
+        btnGuardar.setOnMouseExited(e -> btnGuardar.setStyle(stylePrimary));
 
         txtNombre.clear();
         txtFicha.clear();
         txtAlterno.clear();
         txtExistencia.setText("0");
+        txtPrecio.setText("0.00");
 
         categoriasSeleccionadas.clear();
         proveedoresAgregados.clear();
@@ -817,14 +920,19 @@ public class ProductoView {
     }
 
     /**
-     * Carga los productos en la tabla
+     * Carga la lista de productos desde el servicio y los muestra en la tabla
+     * principal. Este método se llama después de crear, editar o eliminar un
+     * producto para reflejar los cambios en la interfaz
      */
     private void cargarProductos() {
         tablaProductos.getItems().setAll(productoService.consultarProductos());
     }
 
     /**
-     * Configura un ComboBox para mostrar objetos personalizados
+     * Configura un ComboBox para mostrar objetos complejos, utilizando un extractor
+     * de texto para mostrar el valor deseado. Este método se utiliza para los
+     * ComboBox de selección de categorías y servicios, permitiendo mostrar el
+     * nombre o descripción en lugar de la representación por defecto del objeto
      * 
      * @param <T>
      * @param combo

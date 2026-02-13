@@ -117,6 +117,21 @@ public class EmpresaView {
 
         tablaEmpresas = new TableView<>();
         tablaEmpresas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+
+        String estiloThumb = "data:text/css," +
+                ".scroll-bar:vertical .thumb {" +
+                "    -fx-background-color: #DADADA;" +
+                "    -fx-background-insets: 0 4 0 4;" + 
+                "    -fx-background-radius: 4;" + 
+                "}" +
+                ".scroll-bar:horizontal .thumb {" +
+                "    -fx-background-color: #DADADA;" +
+                "    -fx-background-insets: 4 0 4 0;" +
+                "    -fx-background-radius: 4;" +
+                "}";
+                
+        tablaEmpresas.getStylesheets().add(estiloThumb);
+
         tablaEmpresas.setStyle(
                 "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
 
