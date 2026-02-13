@@ -17,19 +17,22 @@ class CategoriaRepositoryTest {
     @Autowired
     private CategoriaRepository categoriaRepository;
 
+    @Autowired
+    private ProductoRepository productoRepository; 
+
     @BeforeEach
     void setUp() {
-        categoriaRepository.deleteAll(); // Limpieza para evitar conflictos de Unique Key
+        productoRepository.deleteAll();
+        
+        categoriaRepository.deleteAll(); 
+        categoriaRepository.flush(); 
 
-        // Insertamos una categoría válida (nombre es obligatorio y único)
         Categoria c = new Categoria();
         c.setNombreCategoria("Materiales de Construcción");
         c.setDescripcionCategoria("Cementos, cal, arena");
         categoriaRepository.save(c);
     }
-
-    // --- TEST: findByNombreCategoria ---
-
+    
     @Test
     @DisplayName("Debe encontrar la categoría por su nombre exacto")
     void testBuscarPorNombre_Existe() {
