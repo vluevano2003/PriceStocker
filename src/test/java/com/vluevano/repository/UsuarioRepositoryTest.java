@@ -6,30 +6,37 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest // Configura H2 en memoria automáticamente
+@DataJpaTest
 class UsuarioRepositoryTest {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private TestEntityManager entityManager; // Agregamos esto
+
     private Usuario usuarioPrueba;
 
     @BeforeEach
     void setUp() {
-        // Limpiamos la BD antes de cada test para evitar choques con datos de Flyway u otros tests
-        usuarioRepository.deleteAll(); 
+        // En lugar de deleteAll, limpiamos y reseteamos el estado
+        usuarioRepository.deleteAll();
+        entityManager.flush();
+        entityManager.clear();
         
-        // Creamos un usuario controlado para las pruebas
         usuarioPrueba = new Usuario();
         usuarioPrueba.setNombreUsuario("usuario_test_unico");
         usuarioPrueba.setContrasenaUsuario("123456");
-        usuarioPrueba.setPermiso(true);  
-        usuarioRepository.save(usuarioPrueba);
+        usuarioPrueba.setPermiso(true);
+        
+        // Usamos el entityManager para persistir y asegurar que se asigne un ID nuevo
+        usuarioPrueba = entityManager.persistAndFlush(usuarioPrueba);
     }
 
     // --- TEST: Búsqueda por credenciales ---
