@@ -1,39 +1,38 @@
 # PriceStocker
 
-PriceStocker está diseñado para optimizar la gestión de inventarios, permitiendo controlar y consultar sus productos y sus respectivos proveedores, clientes, fabricantes, prestadores de servicios y empresas del mercado. 
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.4-green)
+![JavaFX](https://img.shields.io/badge/JavaFX-23-blue)
+![Build Status](https://github.com/vluevano2003/PriceStocker/actions/workflows/maven.yml/badge.svg)
 
-## Requerimientos Funcionales
+**PriceStocker** es un sistema integral de gestión de inventarios y administración comercial de escritorio, construido con una arquitectura robusta utilizando **Spring Boot** para el backend y **JavaFX** para una interfaz de usuario moderna y fluida.
 
-### Gestión de Productos:
-- Registro y consulta de productos con detalles como ID, nombre, descripción, existencia y proveedores.
-- Los productos pueden tener múltiples precios de compra, venta y mercado, con un historial de cambios y posibilidad de conversión de divisas entre dólares y pesos mexicanos.
-- Búsqueda avanzada de productos por nombre, categoría, ID, proveedor, fabricante, cliente, empresa, etc.
+---
 
-### Gestión de Proveedores:
-- Registro de proveedores con detalles como ID, nombre, tipo (persona física o jurídica), dirección, RFC, teléfono, correo y CURP.
-- Los proveedores pueden tener múltiples categorías y se pueden buscar por diferentes filtros.
+## 📦 Características Principales
 
-### Gestión de Fabricantes:
-- Registro de fabricantes con información detallada similar a la de los proveedores.
-- Los fabricantes también pueden tener categorías y se podrán realizar búsquedas avanzadas.
+El sistema está diseñado para gestionar el ciclo completo de productos y relaciones comerciales:
 
-### Gestión de Clientes:
-- Registro de clientes con datos completos como nombre, RFC, dirección y categorías.
-- Los clientes se podrán buscar por filtros y categorías.
+* **Control de Acceso:** Sistema de Login seguro con gestión de usuarios y permisos.
+* **Gestión de Productos:** Catálogo detallado con soporte para categorización.
+* **Precios Dinámicos:** Gestión avanzada de costos y precios por tipo de relación (Cliente, Proveedor, Fabricante, Empresa) con soporte para múltiples monedas (MXN/USD).
+* **Gestión de Terceros:** Módulos completos para administrar:
+    * Clientes.
+    * Proveedores.
+    * Fabricantes.
+    * Empresas competidoras.
+    * Prestadores de Servicios.
 
-### Mercado (Empresas):
-- Registro de empresas del mercado que ofrecen productos a precios variables.
-- Funciones de búsqueda de empresas por filtros similares a proveedores y clientes.
+---
 
-### Prestadores de Servicios:
-- Registro de prestadores con información sobre servicios y rutas que ofrecen.
-- Búsqueda avanzada por prestador, ruta, servicio, tipo de servicio, entre otros.
-
-### Funcionalidades Adicionales:
-- **Inicio de sesión y gestión de cuentas**: Solo el administrador podrá gestionar cuentas de usuario.
-
-## Especificaciones Técnicas
-
-- **Lenguaje de programación**: Java.
-- **Base de datos**: PostgreSQL.
-- **Interfaz de usuario**: Se incluirán formularios intuitivos para el registro de datos, y soporte para importar archivos Excel.
+## 🛠️ Tecnologías Utilizadas
+* **Lenguaje:** Java 21 (LTS).
+* **Framework:** Spring Boot 3.2.4 (Inyección de dependencias, Transacciones).
+* **UI:** JavaFX 23.0.2 (Interfaz gráfica de escritorio).
+* **Base de Datos:** H2 Database (Embebida, modo archivo `.mv.db`).
+* **Migraciones:** Flyway (Control de versiones de base de datos).
+* **ORM:** Hibernate / Spring Data JPA.
+* **JUnit 5:** Framework de pruebas.
+* **Mockito:** Simulación de dependencias (Mocks).
+* **CI/CD:** Configurado con **GitHub Actions** para ejecución automática de pruebas en cada Push/Pull Request.
+* **Herramientas:** Maven, Lombok.
