@@ -6,11 +6,13 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.4</version> <relativePath/> </parent>
+    <version>3.2.4</version>
+    <relativePath/>
+  </parent>
 
   <groupId>com.vluevano</groupId>
   <artifactId>pricestocker</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.1-SNAPSHOT</version>
   <name>pricestocker</name>
   <description>Sistema de Inventario con Spring Boot y JavaFX</description>
 
@@ -48,7 +50,7 @@
       <version>${javafx.version}</version>
     </dependency>
 
-   <dependency>
+    <dependency>
         <groupId>com.h2database</groupId>
         <artifactId>h2</artifactId>
         <scope>runtime</scope>
@@ -95,6 +97,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <mainClass>com.vluevano.PriceStockerApplication</mainClass>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>
@@ -102,6 +105,53 @@
             </exclude>
           </excludes>
         </configuration>
+        <executions>
+            <execution>
+                <goals>
+                    <goal>build-info</goal>
+                </goals>
+            </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.akathist.maven.plugins.launch4j</groupId>
+        <artifactId>launch4j-maven-plugin</artifactId>
+        <version>2.5.2</version>
+        <executions>
+          <execution>
+            <id>l4j-clui</id>
+            <phase>package</phase>
+            <goals>
+              <goal>launch4j</goal>
+            </goals>
+            <configuration>
+              <headerType>gui</headerType>
+              <jar>${project.build.directory}/${project.artifactId}-${project.version}.jar</jar>
+              <outfile>${project.build.directory}/PriceStocker.exe</outfile>
+              <icon>src/main/resources/images/icon.ico</icon>
+              <downloadUrl>http://java.com/download</downloadUrl>
+              <classPath>
+                <mainClass>org.springframework.boot.loader.launch.JarLauncher</mainClass>
+              </classPath>
+              <jre>
+                <path>jre</path>
+                <minVersion>21</minVersion>
+              </jre>
+              <versionInfo>
+                <fileVersion>1.0.0.0</fileVersion>
+                <txtFileVersion>${project.version}</txtFileVersion>
+                <fileDescription>Sistema de Inventario PriceStocker</fileDescription>
+                <copyright>2026 Vluevano</copyright>
+                <productVersion>1.0.0.0</productVersion>
+                <txtProductVersion>${project.version}</txtProductVersion>
+                <productName>PriceStocker</productName>
+                <internalName>pricestocker</internalName>
+                <originalFilename>PriceStocker.exe</originalFilename>
+              </versionInfo>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
