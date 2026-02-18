@@ -4,16 +4,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "producto")
-@Data
+@Data // Lombok genera automáticamente los getters y setters
 @EqualsAndHashCode(of = "idProducto")
-@ToString(exclude = { "productoProveedores", "productoClientes", "productoEmpresas", "productoFabricantes", "servicios",
-        "categorias" })
+@ToString(exclude = { "productoProveedores", "productoClientes", "productoEmpresas", "productoFabricantes", "servicios", "categorias" })
 public class Producto {
 
     @Id
@@ -35,6 +33,9 @@ public class Producto {
 
     @Column(name = "precioproducto")
     private Double precioProducto;
+
+    @Column(name = "monedaproducto", length = 3)
+    private String monedaProducto;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "productocategoria", joinColumns = @JoinColumn(name = "idproducto"), inverseJoinColumns = @JoinColumn(name = "idcategoria"))

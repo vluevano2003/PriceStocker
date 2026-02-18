@@ -1,15 +1,19 @@
 package com.vluevano.view;
 
+import com.vluevano.service.MonedaService;
 import com.vluevano.service.UsuarioService;
 
 import javafx.animation.TranslateTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
@@ -83,6 +87,13 @@ public class MenuPrincipalScreen {
     @Lazy
     private HistorialComprasView historialComprasView;
 
+    @Autowired
+    @Lazy
+    private ConfiguracionView configuracionView;
+
+    @Autowired
+    private MonedaService monedaService;
+
     private Stage stage;
     private BorderPane rootLayout;
     private String usuarioActual;
@@ -94,7 +105,6 @@ public class MenuPrincipalScreen {
     private boolean menuFabAbierto = false;
     private Region overlayOscuro;
 
-    // Colores y estilos
     private static final String COLOR_PRIMARY = "#F97316";
     private static final String COLOR_SIDEBAR_BG = "#111827";
     private static final String COLOR_SIDEBAR_HOVER = "#1F2937";
@@ -102,8 +112,33 @@ public class MenuPrincipalScreen {
     private static final String COLOR_TEXT_SIDEBAR_ACTIVE = "#FFFFFF";
     private static final String COLOR_BG_DASHBOARD = "#F3F4F6";
 
+    private static final String MENU_STYLES = "data:text/css," +
+            ".context-menu {" +
+            "    -fx-background-color: white;" +
+            "    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 4);" +
+            "    -fx-background-radius: 8;" +
+            "    -fx-border-radius: 8;" +
+            "    -fx-border-color: #E5E7EB;" +
+            "    -fx-border-width: 1;" +
+            "    -fx-padding: 4 0 4 0;" +
+            "}" +
+            ".menu-item {" +
+            "    -fx-background-color: transparent;" +
+            "    -fx-padding: 8 15 8 15;" +
+            "}" +
+            ".menu-item:focused {" +
+            "    -fx-background-color: #F3F4F6;" +
+            "    -fx-cursor: hand;" +
+            "}" +
+            ".menu-item .label {" +
+            "    -fx-text-fill: #374151;" +
+            "    -fx-font-family: 'Segoe UI';" +
+            "    -fx-font-size: 13px;" +
+            "    -fx-font-weight: 600;" +
+            "}";
+
     /**
-     * Muestra la pantalla principal del menú
+     * Muestra la pantalla principal del sistema
      * 
      * @param stage
      * @param usuarioActual
@@ -114,16 +149,21 @@ public class MenuPrincipalScreen {
 
         inicializarComponentes();
 
+        Scene scene;
         if (stage.getScene() != null) {
             stage.getScene().setRoot(rootLayout);
+            scene = stage.getScene();
         } else {
-            Scene scene = new Scene(rootLayout, 1200, 768);
+            scene = new Scene(rootLayout, 1200, 768);
             stage.setScene(scene);
+        }
+
+        if (!scene.getStylesheets().contains(MENU_STYLES)) {
+            scene.getStylesheets().add(MENU_STYLES);
         }
 
         stage.setResizable(true);
 
-        // Ajustar tamaño si es muy pequeño
         if (stage.getWidth() < 1000 || Double.isNaN(stage.getWidth())) {
             stage.setWidth(1200);
             stage.setHeight(768);
@@ -135,19 +175,19 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Inicializa los componentes principales de la interfaz
+     * Inicializa los componentes de la interfaz y su estructura general
      */
     private void inicializarComponentes() {
         StackPane rootStack = new StackPane();
-        
+
         BorderPane mainLayout = new BorderPane();
         mainLayout.setLeft(crearSidebar());
-        
+
         BorderPane contentPane = new BorderPane();
         contentPane.setTop(crearHeader());
         contentPane.setCenter(crearPantallaBienvenida());
         mainLayout.setCenter(contentPane);
-        
+
         overlayOscuro = new Region();
         overlayOscuro.setStyle("-fx-background-color: rgba(0,0,0,0.4);");
         overlayOscuro.setVisible(false);
@@ -160,14 +200,17 @@ public class MenuPrincipalScreen {
         StackPane.setMargin(fabContainer, new Insets(0, 30, 30, 0));
 
         this.rootLayout = new BorderPane();
-        this.rootLayout.setCenter(rootStack); 
+        this.rootLayout.setCenter(rootStack);
     }
 
     /**
      * Crea el header superior con información del usuario
+     * 
      * @return
      */
     private HBox crearHeader() {
+        monedaService.inicializar();
+
         HBox header = new HBox(20);
         header.setPadding(new Insets(15, 30, 15, 30));
         header.setAlignment(Pos.CENTER_RIGHT);
@@ -197,7 +240,6 @@ public class MenuPrincipalScreen {
             avatarImg.setImage(new Image(getClass().getResourceAsStream("/images/PriceStockerIcon.png")));
             avatarImg.setFitWidth(40);
             avatarImg.setFitHeight(40);
-
             Circle clip = new Circle(20, 20, 20);
             avatarImg.setClip(clip);
         } catch (Exception e) {
@@ -217,20 +259,38 @@ public class MenuPrincipalScreen {
 
         HBox userSection = new HBox(15, userInfo, avatarContainer);
         userSection.setAlignment(Pos.CENTER_RIGHT);
-        userSection.setCursor(Cursor.HAND); 
-        
-        Tooltip tp = new Tooltip("Editar mi perfil");
+        userSection.setCursor(Cursor.HAND);
+
+        ContextMenu userMenu = new ContextMenu();
+
+        MenuItem itemPerfil = new MenuItem("Editar mi Perfil");
+        itemPerfil.setOnAction(e -> perfilView.show(stage, usuarioActual));
+
+        MenuItem itemConfig = new MenuItem("Configuración");
+        itemConfig.setOnAction(e -> configuracionView.show(stage, usuarioActual));
+
+        SeparatorMenuItem sep = new SeparatorMenuItem();
+
+        MenuItem itemLogout = new MenuItem("Cerrar Sesión");
+        itemLogout.setStyle("-fx-text-fill: #DC2626; -fx-font-weight: 700;");
+        itemLogout.setOnAction(e -> cerrarSesion());
+
+        userMenu.getItems().addAll(itemPerfil, itemConfig, sep, itemLogout);
+
+        userSection.setOnMouseClicked(e -> {
+            userMenu.show(userSection, Side.BOTTOM, 0, 5);
+        });
+
+        Tooltip tp = new Tooltip("Opciones de cuenta");
         Tooltip.install(userSection, tp);
 
-        userSection.setOnMouseClicked(e -> perfilView.show(stage, usuarioActual));
+        header.getChildren().addAll(userSection);
 
-        header.getChildren().add(userSection); 
-        
         return header;
     }
 
     /**
-     * Crea la barra lateral de navegación
+     * Crea la barra lateral de navegación con las diferentes secciones del sistema
      * 
      * @return
      */
@@ -256,24 +316,19 @@ public class MenuPrincipalScreen {
 
         // OPERACIONES
         sidebar.getChildren().add(crearTituloSeccion("OPERACIONES"));
-
-        sidebar.getChildren().add(crearBotonMenu("Gestión de Productos", () -> {
-            productoView.show(stage, usuarioActual);
-        }));
+        sidebar.getChildren()
+                .add(crearBotonMenu("Gestión de Productos", () -> productoView.show(stage, usuarioActual)));
 
         Region spacer1 = new Region();
         spacer1.setPrefHeight(10);
         sidebar.getChildren().add(spacer1);
 
+        // HISTORIAL
         sidebar.getChildren().add(crearTituloSeccion("HISTORIAL"));
-
-        sidebar.getChildren().add(crearBotonMenu("Historial de Ventas", () -> {
-            historialVentasView.show(stage, usuarioActual);
-        }));
-        
-        sidebar.getChildren().add(crearBotonMenu("Historial de Compras", () -> {
-            historialComprasView.show(stage, usuarioActual);
-        }));
+        sidebar.getChildren()
+                .add(crearBotonMenu("Historial de Ventas", () -> historialVentasView.show(stage, usuarioActual)));
+        sidebar.getChildren()
+                .add(crearBotonMenu("Historial de Compras", () -> historialComprasView.show(stage, usuarioActual)));
 
         Region spacer2 = new Region();
         spacer2.setPrefHeight(10);
@@ -281,10 +336,11 @@ public class MenuPrincipalScreen {
 
         // DIRECTORIO
         sidebar.getChildren().add(crearTituloSeccion("DIRECTORIO"));
-        sidebar.getChildren().add(crearBotonMenu("Proveedores", () -> { proveedorView.show(stage, usuarioActual);}));
+        sidebar.getChildren().add(crearBotonMenu("Proveedores", () -> proveedorView.show(stage, usuarioActual)));
         sidebar.getChildren().add(crearBotonMenu("Clientes", () -> clienteView.show(stage, usuarioActual)));
         sidebar.getChildren().add(crearBotonMenu("Fabricantes", () -> fabricanteView.show(stage, usuarioActual)));
-        sidebar.getChildren().add(crearBotonMenu("Competencia del Mercado", () -> empresaView.show(stage, usuarioActual)));
+        sidebar.getChildren()
+                .add(crearBotonMenu("Competencia del Mercado", () -> empresaView.show(stage, usuarioActual)));
         sidebar.getChildren()
                 .add(crearBotonMenu("Prestadores Servicio", () -> prestadorServicioView.show(stage, usuarioActual)));
 
@@ -294,29 +350,14 @@ public class MenuPrincipalScreen {
             spacerAdmin.setPrefHeight(10);
             sidebar.getChildren().add(spacerAdmin);
             sidebar.getChildren().add(crearTituloSeccion("ADMINISTRACIÓN"));
-            Button btnAdmin = crearBotonMenu("Gestión de Usuarios", () -> {
-                usuarioView.show(stage, usuarioActual);
-            });
+            Button btnAdmin = crearBotonMenu("Gestión de Usuarios", () -> usuarioView.show(stage, usuarioActual));
             sidebar.getChildren().add(btnAdmin);
         }
-
-        // FOOTER
-        Region spacerBottom = new Region();
-        VBox.setVgrow(spacerBottom, Priority.ALWAYS);
-
-        Separator sep = new Separator();
-        sep.setOpacity(0.1);
-        sep.setPadding(new Insets(10, 0, 10, 0));
-
-        Button btnCerrar = crearBotonCerrarSesion();
-        HBox logoutContainer = new HBox(btnCerrar);
-        logoutContainer.setAlignment(Pos.CENTER);
-        sidebar.getChildren().addAll(spacerBottom, sep, logoutContainer);
         return sidebar;
     }
 
     /**
-     * Crea un título de sección en la barra lateral
+     * Crea un título para separar secciones en la barra lateral
      * 
      * @param texto
      * @return
@@ -329,7 +370,7 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Crea la pantalla de bienvenida en el centro
+     * Crea la pantalla de bienvenida con el logo y mensaje de bienvenida
      * 
      * @return
      */
@@ -367,7 +408,8 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Crea un botón de menú lateral
+     * Crea un botón para el menú lateral con estilos y efectos de hover
+     * personalizados
      * 
      * @param texto
      * @param accion
@@ -406,100 +448,93 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Crea el botón de cerrar sesión
+     * Crea los botones flotantes para registrar nuevas compras y ventas
      * 
      * @return
      */
-    private Button crearBotonCerrarSesion() {
-        Button btn = new Button("Cerrar Sesión");
-        btn.setPrefWidth(120);
-        btn.setAlignment(Pos.CENTER);
-        btn.setPadding(new Insets(6, 10, 6, 10));
-
-        String styleBase = "-fx-background-color: #EB1414; -fx-text-fill: white; -fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-cursor: hand;";
-        String styleHover = "-fx-background-color: #C01111; -fx-text-fill: white; -fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-cursor: hand; -fx-background-radius: 6;";
-
-        btn.setStyle(styleBase);
-        btn.setOnMouseEntered(e -> btn.setStyle(styleHover));
-        btn.setOnMouseExited(e -> btn.setStyle(styleBase));
-
-        btn.setOnAction(e -> cerrarSesion());
-        return btn;
-    }
-
-    /**
-     * Crea los botones flotantes para registrar nuevas ventas y compras
-     */
     private void crearBotonesFlotantes() {
         String styleMiniFab = "-fx-background-color: white; -fx-text-fill: #111827; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 50; -fx-min-height: 50; -fx-max-width: 50; -fx-max-height: 50; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 6, 0, 0, 2); -fx-cursor: hand;";
-        
-        // Botón Compra
-        btnFabCompra = new Button("C"); 
+
+        btnFabCompra = new Button("C");
         btnFabCompra.setTooltip(new Tooltip("Registrar Compra"));
         btnFabCompra.setStyle(styleMiniFab);
         btnFabCompra.setVisible(false);
-        btnFabCompra.setOnAction(e -> { toggleFabMenu(); compraView.show(stage, usuarioActual); });
+        btnFabCompra.setOnAction(e -> {
+            toggleFabMenu();
+            compraView.show(stage, usuarioActual);
+        });
 
-        // Botón Venta
         btnFabVenta = new Button("V");
         btnFabVenta.setTooltip(new Tooltip("Registrar Venta"));
         btnFabVenta.setStyle(styleMiniFab);
         btnFabVenta.setVisible(false);
-        btnFabVenta.setOnAction(e -> { toggleFabMenu(); ventaView.show(stage, usuarioActual); });
+        btnFabVenta.setOnAction(e -> {
+            toggleFabMenu();
+            ventaView.show(stage, usuarioActual);
+        });
 
         Label lblCompra = new Label("Nueva Compra");
-        lblCompra.setStyle("-fx-text-fill: white; -fx-background-color: #111827; -fx-padding: 5 10 5 10; -fx-background-radius: 5;");
+        lblCompra.setStyle(
+                "-fx-text-fill: white; -fx-background-color: #111827; -fx-padding: 5 10 5 10; -fx-background-radius: 5;");
         lblCompra.setVisible(false);
 
         Label lblVenta = new Label("Nueva Venta");
-        lblVenta.setStyle("-fx-text-fill: white; -fx-background-color: #111827; -fx-padding: 5 10 5 10; -fx-background-radius: 5;");
+        lblVenta.setStyle(
+                "-fx-text-fill: white; -fx-background-color: #111827; -fx-padding: 5 10 5 10; -fx-background-radius: 5;");
         lblVenta.setVisible(false);
 
         HBox rowCompra = new HBox(10, lblCompra, btnFabCompra);
         rowCompra.setAlignment(Pos.CENTER_RIGHT);
-        
+
         HBox rowVenta = new HBox(10, lblVenta, btnFabVenta);
         rowVenta.setAlignment(Pos.CENTER_RIGHT);
 
-        // Botón Principal
         btnFabMain = new Button("+");
-        btnFabMain.setStyle("-fx-background-color: " + COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
+        btnFabMain.setStyle("-fx-background-color: " + COLOR_PRIMARY
+                + "; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-max-width: 60; -fx-max-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
         btnFabMain.setOnAction(e -> toggleFabMenu());
 
         fabContainer = new VBox(15, rowCompra, rowVenta, btnFabMain);
         fabContainer.setAlignment(Pos.BOTTOM_RIGHT);
-        fabContainer.setPickOnBounds(false); 
+        fabContainer.setPickOnBounds(false);
         rowCompra.setPickOnBounds(false);
         rowVenta.setPickOnBounds(false);
         fabContainer.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
     }
 
     /**
-     * Muestra las opciones del botón flotante
+     * Muestra u oculta los botones flotantes de acción rápida para registrar
+     * compras y ventas
      */
     private void toggleFabMenu() {
         menuFabAbierto = !menuFabAbierto;
-        
+
         if (menuFabAbierto) {
-            // Abrir
             overlayOscuro.setVisible(true);
-            mostrarMiniFab(btnFabVenta, ((HBox)btnFabVenta.getParent()).getChildren().get(0)); // Botón y Label
-            mostrarMiniFab(btnFabCompra, ((HBox)btnFabCompra.getParent()).getChildren().get(0));
-            
+            mostrarMiniFab(btnFabVenta, ((HBox) btnFabVenta.getParent()).getChildren().get(0));
+            mostrarMiniFab(btnFabCompra, ((HBox) btnFabCompra.getParent()).getChildren().get(0));
+
             btnFabMain.setText("-");
-            btnFabMain.setStyle("-fx-background-color: #4B5563; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
-        
+            btnFabMain.setStyle(
+                    "-fx-background-color: #4B5563; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
+
         } else {
-            // Cerrar
             overlayOscuro.setVisible(false);
-            ocultarMiniFab(btnFabVenta, ((HBox)btnFabVenta.getParent()).getChildren().get(0));
-            ocultarMiniFab(btnFabCompra, ((HBox)btnFabCompra.getParent()).getChildren().get(0));
-            
+            ocultarMiniFab(btnFabVenta, ((HBox) btnFabVenta.getParent()).getChildren().get(0));
+            ocultarMiniFab(btnFabCompra, ((HBox) btnFabCompra.getParent()).getChildren().get(0));
+
             btnFabMain.setText("+");
-            btnFabMain.setStyle("-fx-background-color: " + COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
+            btnFabMain.setStyle("-fx-background-color: " + COLOR_PRIMARY
+                    + "; -fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-min-width: 60; -fx-min-height: 60; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3); -fx-cursor: hand;");
         }
     }
 
+    /**
+     * Muestra el mini botón flotante con animación de aparición
+     * 
+     * @param btn
+     * @param lbl
+     */
     private void mostrarMiniFab(Button btn, javafx.scene.Node lbl) {
         btn.setVisible(true);
         lbl.setVisible(true);
@@ -510,7 +545,8 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Oculta las opciones del botón flotante
+     * Oculta el mini botón flotante con animación de desaparición
+     * 
      * @param btn
      * @param lbl
      */
@@ -520,7 +556,7 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Cerrar sesión y volver a la pantalla de login
+     * Cierra la sesión del usuario actual y regresa a la pantalla de login
      */
     private void cerrarSesion() {
         loginScreen.show(stage);
