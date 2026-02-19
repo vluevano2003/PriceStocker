@@ -3,6 +3,7 @@ package com.vluevano.view;
 import com.vluevano.model.Compra;
 import com.vluevano.service.CompraService;
 import com.vluevano.service.DialogService;
+import com.vluevano.service.MonedaService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
 import javafx.beans.property.SimpleStringProperty;
@@ -42,6 +43,9 @@ public class HistorialComprasView {
 
     @Autowired
     private DialogService dialogService;
+
+    @Autowired
+    private MonedaService monedaService;
 
     private String usuarioActual;
     private TableView<Compra> tabla;
@@ -192,7 +196,7 @@ public class HistorialComprasView {
         });
 
         TableColumn<Compra, String> colOrigen = new TableColumn<>("Origen (Prov./Fab.)");
-        colOrigen.setMinWidth(200);
+        colOrigen.setMinWidth(140);
         colOrigen.setCellValueFactory(c -> {
             if (c.getValue().getProveedor() != null)
                 return new SimpleStringProperty("[P] " + c.getValue().getProveedor().getNombreProv());
@@ -207,11 +211,11 @@ public class HistorialComprasView {
         colUsuario.setMaxWidth(120);
 
         TableColumn<Compra, String> colTotal = new TableColumn<>("Total");
-        colTotal.setCellValueFactory(
-                c -> new SimpleStringProperty(String.format("$%.2f", c.getValue().getTotalCompra())));
+        colTotal.setCellValueFactory(c -> new SimpleStringProperty(
+                formatearPrecioInteligente(c.getValue().getTotalCompra(), c.getValue().getMoneda())));
         colTotal.setStyle("-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
-        colTotal.setMinWidth(120);
-        colTotal.setMaxWidth(120);
+        colTotal.setMinWidth(240);
+        colTotal.setMaxWidth(280);
 
         tabla.getColumns().addAll(colId, colFecha, colDetalles, colOrigen, colUsuario, colTotal);
 
@@ -239,7 +243,7 @@ public class HistorialComprasView {
         VBox root = new VBox(15);
         root.setPadding(new Insets(20));
         root.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
-        root.setMinWidth(550);
+        root.setMinWidth(700);
         root.setMinHeight(400);
 
         Label lblTitulo = new Label("Detalle de Compra #" + compra.getIdcompra());
@@ -276,13 +280,16 @@ public class HistorialComprasView {
         colCant.setStyle("-fx-alignment: CENTER;");
 
         TableColumn<DetalleCompra, String> colCosto = new TableColumn<>("Costo U.");
-        colCosto.setCellValueFactory(
-                d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getCostoUnitario())));
+        colCosto.setCellValueFactory(d -> new SimpleStringProperty(
+                formatearPrecioInteligente(d.getValue().getCostoUnitario(), compra.getMoneda())));
         colCosto.setStyle("-fx-alignment: CENTER-RIGHT;");
+        colCosto.setMinWidth(180);
 
         TableColumn<DetalleCompra, String> colSub = new TableColumn<>("Subtotal");
-        colSub.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getSubtotal())));
+        colSub.setCellValueFactory(d -> new SimpleStringProperty(
+                formatearPrecioInteligente(d.getValue().getSubtotal(), compra.getMoneda())));
         colSub.setStyle("-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
+        colSub.setMinWidth(180);
 
         tableDetalles.getColumns().addAll(colProd, colCant, colCosto, colSub);
 
@@ -353,5 +360,25 @@ public class HistorialComprasView {
         }
 
         tabla.setItems(FXCollections.observableArrayList(compras));
+    }
+
+    private String formatearPrecioInteligente(double precio, String monedaItem) {
+        if (monedaItem == null)
+            monedaItem = "MXN";
+        String monedaPref = monedaService.getMonedaPorDefecto();
+        String textoOriginal = String.format("$%.2f %s", precio, monedaItem);
+
+        if (monedaItem.equalsIgnoreCase(monedaPref))
+            return textoOriginal;
+        try {
+            double tipoCambio = monedaService.convertirAMxn(1.0, "USD");
+            if (tipoCambio == 0)
+                tipoCambio = 20.0;
+            double precioConvertido = monedaPref.equalsIgnoreCase("MXN") ? (precio * tipoCambio)
+                    : (precio / tipoCambio);
+            return String.format("%s (≈ $%.2f %s)", textoOriginal, precioConvertido, monedaPref);
+        } catch (Exception e) {
+            return textoOriginal;
+        }
     }
 }

@@ -4,6 +4,8 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import com.vluevano.model.Compra;
 import com.vluevano.model.Venta;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
@@ -17,6 +19,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class PdfService {
+
+    @Autowired
+    private MonedaService monedaService;
 
     private static final Color COLOR_PRIMARY = new Color(249, 115, 22);
     private static final Color COLOR_DARK_TEXT = new Color(17, 24, 39);
@@ -48,10 +53,10 @@ public class PdfService {
 
             PdfPTable table = new PdfPTable(6);
             table.setWidthPercentage(100);
-            table.setWidths(new float[] { 1f, 1.5f, 4.5f, 2f, 1.5f, 1.5f });
+            table.setWidths(new float[] { 1f, 1.5f, 4.5f, 2.5f, 1.5f, 1.5f });
             table.setSpacingBefore(20);
 
-            agregarCeldaEncabezado(table, "ID");
+            agregarCeldaEncabezado(table, "FOLIO");
             agregarCeldaEncabezado(table, "FECHA");
             agregarCeldaEncabezado(table, "PRODUCTOS");
             agregarCeldaEncabezado(table, "CLIENTE");
@@ -62,6 +67,10 @@ public class PdfService {
             double granTotal = 0;
             boolean esPar = false;
 
+            String monedaPref = monedaService.getMonedaPorDefecto();
+            double tc = monedaService.getTipoCambioActual();
+            if (tc == 0) tc = 20.0;
+
             for (Venta v : listaVentas) {
                 Color bgColor = esPar ? new Color(243, 244, 246) : Color.WHITE;
 
@@ -71,25 +80,36 @@ public class PdfService {
                 String detalleProductos = "Sin detalles";
                 if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
                     detalleProductos = v.getDetalles().stream()
-                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ")")
+                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ") - "
+                                    + formatPdfPrecio(d.getPrecioUnitario(), v.getMoneda()))
                             .collect(Collectors.joining("\n"));
                 }
                 PdfPCell cellProd = new PdfPCell(new Phrase(detalleProductos, FONT_DATA_SMALL));
                 estilizarCeldaDato(cellProd, Element.ALIGN_LEFT, bgColor);
                 table.addCell(cellProd);
 
-                agregarCeldaDato(table, v.getCliente() != null ? v.getCliente().getNombreCliente() : "Público General",
-                        Element.ALIGN_LEFT, bgColor);
+                agregarCeldaDato(table, v.getCliente() != null ? v.getCliente().getNombreCliente() : "Público General", Element.ALIGN_LEFT, bgColor);
                 agregarCeldaDato(table, v.getUsuario().getNombreUsuario(), Element.ALIGN_CENTER, bgColor);
 
-                String totalStr = String.format("$ %,.2f", v.getTotalVenta());
+                String totalStr = formatPdfPrecio(v.getTotalVenta(), v.getMoneda());
                 agregarCeldaDato(table, totalStr, Element.ALIGN_RIGHT, bgColor);
 
-                granTotal += v.getTotalVenta();
+                double totalDoc = v.getTotalVenta();
+                String monedaDoc = v.getMoneda() != null ? v.getMoneda() : "MXN";
+
+                if (monedaDoc.equalsIgnoreCase(monedaPref)) {
+                    granTotal += totalDoc;
+                } else {
+                    if (monedaPref.equalsIgnoreCase("MXN") && monedaDoc.equalsIgnoreCase("USD")) {
+                        granTotal += (totalDoc * tc);
+                    } else if (monedaPref.equalsIgnoreCase("USD") && monedaDoc.equalsIgnoreCase("MXN")) {
+                        granTotal += (totalDoc / tc); 
+                    }
+                }
                 esPar = !esPar;
             }
             document.add(table);
-            agregarSeccionTotal(document, "Total Ingresos:", granTotal);
+            agregarSeccionTotal(document, "Total Ingresos (" + monedaPref + "):", granTotal);
 
         } catch (DocumentException e) {
             throw new IOException("Error PDF Ventas", e);
@@ -130,6 +150,11 @@ public class PdfService {
             double granTotal = 0;
             boolean esPar = false;
 
+            String monedaPref = monedaService.getMonedaPorDefecto();
+            double tc = monedaService.getTipoCambioActual();
+            if (tc == 0)
+                tc = 20.0;
+
             for (Compra c : listaCompras) {
                 Color bgColor = esPar ? new Color(243, 244, 246) : Color.WHITE;
 
@@ -139,7 +164,8 @@ public class PdfService {
                 String detalleProductos = "Sin detalles";
                 if (c.getDetalles() != null && !c.getDetalles().isEmpty()) {
                     detalleProductos = c.getDetalles().stream()
-                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ")")
+                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ") - "
+                                    + formatPdfPrecio(d.getCostoUnitario(), c.getMoneda()))
                             .collect(Collectors.joining("\n"));
                 }
                 PdfPCell cellProd = new PdfPCell(new Phrase(detalleProductos, FONT_DATA_SMALL));
@@ -155,14 +181,26 @@ public class PdfService {
                 agregarCeldaDato(table, origen, Element.ALIGN_LEFT, bgColor);
                 agregarCeldaDato(table, c.getUsuario().getNombreUsuario(), Element.ALIGN_CENTER, bgColor);
 
-                String totalStr = String.format("$ %,.2f", c.getTotalCompra());
+                String totalStr = formatPdfPrecio(c.getTotalCompra(), c.getMoneda());
                 agregarCeldaDato(table, totalStr, Element.ALIGN_RIGHT, bgColor);
 
-                granTotal += c.getTotalCompra();
+                double totalDoc = c.getTotalCompra();
+                String monedaDoc = c.getMoneda() != null ? c.getMoneda() : "MXN";
+
+                if (monedaDoc.equalsIgnoreCase(monedaPref)) {
+                    granTotal += totalDoc;
+                } else {
+                    if (monedaPref.equalsIgnoreCase("MXN") && monedaDoc.equalsIgnoreCase("USD")) {
+                        granTotal += (totalDoc * tc);
+                    } else if (monedaPref.equalsIgnoreCase("USD") && monedaDoc.equalsIgnoreCase("MXN")) {
+                        granTotal += (totalDoc / tc); 
+                    }
+                }
+
                 esPar = !esPar;
             }
             document.add(table);
-            agregarSeccionTotal(document, "Total Egresos:", granTotal);
+            agregarSeccionTotal(document, "Total Egresos (" + monedaPref + "):", granTotal);
 
         } catch (DocumentException e) {
             throw new IOException("Error PDF Compras", e);
@@ -323,5 +361,31 @@ public class PdfService {
         pTotal.add(new Chunk(String.format("$ %,.2f", valor), FONT_TOTAL));
         pTotal.setSpacingBefore(5);
         document.add(pTotal);
+    }
+
+    /**
+     * Formatea un precio para mostrarlo en el PDF, incluyendo la moneda original y una conversión aproximada a la moneda preferida del sistema. Si el precio está en una moneda diferente a la preferida, se muestra el precio original seguido de una aproximación entre paréntesis con el símbolo de la moneda preferida. Si no se puede obtener el tipo de cambio, se muestra solo el precio original.
+     * @param precio
+     * @param monedaItem
+     * @return
+     */
+    private String formatPdfPrecio(double precio, String monedaItem) {
+        if (monedaItem == null)
+            monedaItem = "MXN";
+        String monedaPref = monedaService.getMonedaPorDefecto();
+        String textoOriginal = String.format("$ %,.2f %s", precio, monedaItem);
+
+        if (monedaItem.equalsIgnoreCase(monedaPref))
+            return textoOriginal;
+        try {
+            double tipoCambio = monedaService.convertirAMxn(1.0, "USD");
+            if (tipoCambio == 0)
+                tipoCambio = 20.0;
+            double precioConvertido = monedaPref.equalsIgnoreCase("MXN") ? (precio * tipoCambio)
+                    : (precio / tipoCambio);
+            return String.format("%s (≈ $ %,.2f %s)", textoOriginal, precioConvertido, monedaPref);
+        } catch (Exception e) {
+            return textoOriginal;
+        }
     }
 }
