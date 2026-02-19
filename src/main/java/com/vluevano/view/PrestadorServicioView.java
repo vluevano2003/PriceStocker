@@ -3,6 +3,7 @@ package com.vluevano.view;
 import com.vluevano.model.PrestadorServicio;
 import com.vluevano.model.Servicio;
 import com.vluevano.service.DialogService;
+import com.vluevano.service.MonedaService;
 import com.vluevano.service.PrestadorServicioService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
@@ -34,6 +35,9 @@ public class PrestadorServicioView {
     @Lazy
     private MenuPrincipalScreen menuPrincipalScreen;
 
+    @Autowired
+    private MonedaService monedaService;
+
     private Stage stage;
     private String usuarioActual;
 
@@ -59,6 +63,8 @@ public class PrestadorServicioView {
     public void show(Stage stage, String usuarioActual) {
         this.stage = stage;
         this.usuarioActual = usuarioActual;
+
+        monedaService.inicializar();
 
         BorderPane root = crearContenido();
 
@@ -123,15 +129,15 @@ public class PrestadorServicioView {
         String estiloThumb = "data:text/css," +
                 ".scroll-bar:vertical .thumb {" +
                 "    -fx-background-color: #DADADA;" +
-                "    -fx-background-insets: 0 4 0 4;" + 
-                "    -fx-background-radius: 4;" + 
+                "    -fx-background-insets: 0 4 0 4;" +
+                "    -fx-background-radius: 4;" +
                 "}" +
                 ".scroll-bar:horizontal .thumb {" +
                 "    -fx-background-color: #DADADA;" +
                 "    -fx-background-insets: 4 0 4 0;" +
                 "    -fx-background-radius: 4;" +
                 "}";
-                
+
         tablaPrestadores.getStylesheets().add(estiloThumb);
 
         tablaPrestadores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
@@ -256,8 +262,9 @@ public class PrestadorServicioView {
 
         VBox listaServicios = new VBox(5);
         for (Servicio s : prestador.getServicios()) {
-            Label ls = new Label(
-                    "• " + s.getDescripcionServicio() + " - $" + s.getCostoServicio() + " " + s.getMonedaServicio());
+            Label ls = new Label("• " + s.getDescripcionServicio() + " - "
+                    + formatearPrecioInteligente(s.getCostoServicio(), s.getMonedaServicio()));
+
             ls.setStyle("-fx-text-fill: #4B5563;");
             listaServicios.getChildren().add(ls);
         }
@@ -344,7 +351,8 @@ public class PrestadorServicioView {
                 if (empty || item == null) {
                     setGraphic(null);
                 } else {
-                    lblTexto.setText(item.toString());
+                    lblTexto.setText(item.getDescripcionServicio() + " - "
+                            + formatearPrecioInteligente(item.getCostoServicio(), item.getMonedaServicio()));
                     setGraphic(container);
                 }
             }
@@ -352,12 +360,21 @@ public class PrestadorServicioView {
 
         txtDescServicio = UIFactory.crearInput("Descripción (Ej. Flete local)");
         txtCostoServicio = UIFactory.crearInput("Costo");
+        txtCostoServicio.setTextFormatter(
+                new TextFormatter<>(change -> change.getControlNewText().matches("\\d*|\\d+\\.\\d*") ? change : null));
 
         cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
-        cmbMoneda.getSelectionModel().select(0);
+        cmbMoneda.setValue(monedaService.getMonedaPorDefecto());
         cmbMoneda.setPrefWidth(90);
         cmbMoneda.setStyle(
                 "-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 13px;");
+
+        Label lblConvServicio = new Label("");
+        lblConvServicio.setStyle("-fx-text-fill: #F97316; -fx-font-size: 11px; -fx-font-weight: bold;");
+
+        Runnable calc = () -> calcularEquivalenciaGeneral(txtCostoServicio, cmbMoneda, lblConvServicio);
+        txtCostoServicio.textProperty().addListener((o, v, n) -> calc.run());
+        cmbMoneda.setOnAction(e -> calc.run());
 
         Button btnAddServicio = new Button("Agregar");
         String styleNormal = "-fx-background-color: #D1FAE5; -fx-text-fill: #065F46; -fx-cursor: hand; -fx-font-weight: bold; -fx-border-color: #A7F3D0; -fx-background-radius: 6; -fx-border-radius: 6;";
@@ -367,7 +384,6 @@ public class PrestadorServicioView {
         btnAddServicio.setOnMouseEntered(e -> btnAddServicio.setStyle(styleHover));
         btnAddServicio.setOnMouseExited(e -> btnAddServicio.setStyle(styleNormal));
         btnAddServicio.setMinWidth(80);
-
         btnAddServicio.setOnAction(e -> agregarServicioALista());
 
         VBox boxInputsServicio = new VBox(8);
@@ -377,7 +393,8 @@ public class PrestadorServicioView {
         row2.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(txtCostoServicio, Priority.ALWAYS);
 
-        boxInputsServicio.getChildren().add(row2);
+        VBox groupCosto = new VBox(2, row2, lblConvServicio);
+        boxInputsServicio.getChildren().add(groupCosto);
 
         Label lblTituloServicios = UIFactory.crearTituloSeccion("Servicios Ofrecidos *");
         lblTituloServicios.setPadding(new Insets(15, 0, 2, 0));
@@ -649,5 +666,84 @@ public class PrestadorServicioView {
      */
     private boolean esVacio(TextField tf) {
         return tf.getText() == null || tf.getText().trim().isEmpty();
+    }
+
+    /**
+     * Calcula y muestra la equivalencia aproximada del monto ingresado en la moneda
+     * preferida del sistema
+     * 
+     * @param inputMonto
+     * @param comboMoneda
+     * @param labelDestino
+     */
+    private void calcularEquivalenciaGeneral(TextField inputMonto, ComboBox<String> comboMoneda, Label labelDestino) {
+        try {
+            String textVal = inputMonto.getText().trim();
+            if (textVal.isEmpty()) {
+                labelDestino.setText("");
+                return;
+            }
+            double val = Double.parseDouble(textVal);
+            String monedaSeleccionada = comboMoneda.getValue();
+            String monedaPreferida = monedaService.getMonedaPorDefecto();
+
+            if (monedaSeleccionada.equals(monedaPreferida)) {
+                labelDestino.setText("");
+                return;
+            }
+
+            double tipoCambio = monedaService.convertirAMxn(1.0, "USD");
+            if (tipoCambio == 0)
+                tipoCambio = 20.0;
+
+            if (monedaPreferida.equals("MXN")) {
+                double enPesos = val * tipoCambio;
+                labelDestino.setText(String.format("≈ $%.2f MXN", enPesos));
+            } else {
+                double enDolares = val / tipoCambio;
+                labelDestino.setText(String.format("≈ $%.2f USD", enDolares));
+            }
+        } catch (Exception e) {
+            labelDestino.setText("");
+        }
+    }
+
+    /**
+     * Formatea el precio mostrando la conversión aproximada a la moneda preferida
+     * del sistema
+     * 
+     * @param precio
+     * @param monedaItem
+     * @return
+     */
+    private String formatearPrecioInteligente(double precio, String monedaItem) {
+        String monedaPref = monedaService.getMonedaPorDefecto();
+        String textoOriginal = String.format("$%.2f %s", precio, monedaItem);
+
+        if (monedaItem.equalsIgnoreCase(monedaPref)) {
+            return textoOriginal;
+        }
+
+        try {
+            double tipoCambio = monedaService.convertirAMxn(1.0, "USD");
+            if (tipoCambio == 0)
+                tipoCambio = 20.0;
+
+            double precioConvertido;
+            String monedaDestino;
+
+            if (monedaPref.equalsIgnoreCase("MXN")) {
+                precioConvertido = precio * tipoCambio;
+                monedaDestino = "MXN";
+            } else {
+                precioConvertido = precio / tipoCambio;
+                monedaDestino = "USD";
+            }
+
+            return String.format("%s (≈ $%.2f %s)", textoOriginal, precioConvertido, monedaDestino);
+
+        } catch (Exception e) {
+            return textoOriginal;
+        }
     }
 }
