@@ -95,7 +95,6 @@ public class CompraService {
                 p.setExistenciaProducto(p.getExistenciaProducto() + det.getCantidad());
                 productoRepository.save(p);
 
-                // SE CORRIGE EL "MXN" QUEMADO. AHORA USA LA MONEDA DE LA COMPRA
                 String monedaDestino = compra.getMoneda() != null ? compra.getMoneda() : "MXN";
 
                 if (compra.getProveedor() != null) {
@@ -107,7 +106,7 @@ public class CompraService {
                         pp.setProducto(p);
                         pp.setProveedor(prov);
                     }
-                    pp.setMoneda(monedaDestino); // <-- AQUÍ
+                    pp.setMoneda(monedaDestino);
                     pp.setCosto(det.getCostoUnitario());
                     productoProveedorRepository.save(pp);
                 }
@@ -121,7 +120,7 @@ public class CompraService {
                         pf.setProducto(p);
                         pf.setFabricante(fab);
                     }
-                    pf.setMoneda(monedaDestino); // <-- AQUÍ
+                    pf.setMoneda(monedaDestino);
                     pf.setCosto(det.getCostoUnitario());
                     productoFabricanteRepository.save(pf);
                 }

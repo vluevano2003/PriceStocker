@@ -25,9 +25,7 @@ public class VentaService {
     private ProductoClienteRepository productoClienteRepository;
 
     /**
-     * Obtiene el precio de venta para un producto dado un cliente, siguiendo la
-     * lógica de prioridad:
-     * 
+     * Obtiene el precio de venta registrado históricamente para un producto y un cliente
      * @param p
      * @param c
      * @return
@@ -46,9 +44,22 @@ public class VentaService {
     }
 
     /**
-     * Registra una venta, actualiza stock y guarda el precio específico para el
-     * cliente.
-     * 
+     * Obtiene la moneda con la que se hizo la venta, dando prioridad a la moneda específica del cliente-producto, luego a la moneda del producto y finalmente a "MXN" si no hay información
+     * @param p
+     * @param c
+     * @return
+     */
+    public String obtenerMonedaVenta(Producto p, Cliente c) {
+        if (p == null) return "MXN";
+        if (c != null) {
+            ProductoCliente pc = productoClienteRepository.findPrecioEspecifico(p.getIdProducto(), c.getIdCliente());
+            if (pc != null && pc.getMoneda() != null) return pc.getMoneda();
+        }
+        return p.getMonedaProducto() != null ? p.getMonedaProducto() : "MXN";
+    }
+
+    /**
+     * Registra una venta con sus detalles, actualizando el stock de los productos y guardando la moneda utilizada. Si el cliente tiene un precio específico, se guarda esa información para futuras consultas
      * @param venta
      * @param detalles
      * @param nombreUsuario
@@ -58,8 +69,7 @@ public class VentaService {
     public String registrarVenta(Venta venta, List<DetalleVenta> detalles, String nombreUsuario) {
         try {
             Usuario u = usuarioRepository.findByNombreUsuario(nombreUsuario).orElse(null);
-            if (u == null)
-                return "Error: Usuario no encontrado.";
+            if (u == null) return "Error: Usuario no encontrado.";
 
             venta.setUsuario(u);
             venta.setFechaVenta(LocalDateTime.now());
@@ -81,19 +91,20 @@ public class VentaService {
                 p.setExistenciaProducto(p.getExistenciaProducto() - det.getCantidad());
                 productoRepository.save(p);
 
+                String monedaDestino = venta.getMoneda() != null ? venta.getMoneda() : "MXN";
+
                 if (venta.getCliente() != null) {
                     Cliente cliente = venta.getCliente();
 
-                    ProductoCliente pc = productoClienteRepository.findPrecioEspecifico(p.getIdProducto(),
-                            cliente.getIdCliente());
+                    ProductoCliente pc = productoClienteRepository.findPrecioEspecifico(p.getIdProducto(), cliente.getIdCliente());
 
                     if (pc == null) {
                         pc = new ProductoCliente();
                         pc.setProducto(p);
                         pc.setCliente(cliente);
-                        pc.setMoneda("MXN");
                     }
-
+                    
+                    pc.setMoneda(monedaDestino);
                     pc.setCosto(det.getPrecioUnitario());
                     productoClienteRepository.save(pc);
                 }
@@ -108,7 +119,7 @@ public class VentaService {
     }
 
     /**
-     * Obtiene las ventas realizadas en un rango de fechas específico
+     * Obtiene todas las ventas realizadas dentro de un rango de fechas específico, incluyendo la información del cliente, usuario y detalles de cada venta
      * @param fechaInicio
      * @param fechaFin
      * @return

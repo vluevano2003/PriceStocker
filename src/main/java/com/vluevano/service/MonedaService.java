@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Service
 public class MonedaService {
@@ -162,5 +163,20 @@ public class MonedaService {
         }
         
         return String.format("$%.2f %s", monto, monedaItem);
+    }
+
+    /**
+     * Este método se ejecuta automáticamente cada 12 horas (después de un retraso inicial de 5 segundos al iniciar la aplicación) para intentar actualizar el tipo de cambio desde internet. Si la actualización es exitosa, se muestra un mensaje con el nuevo tipo de cambio. Si falla (por ejemplo, debido a un error de red), se muestra un mensaje indicando que se usará el último valor guardado sin interrumpir el funcionamiento del programa
+     */
+    @Scheduled(initialDelay = 5000, fixedRate = 43200000) 
+    public void actualizarMonedaAutomaticamente() {
+        System.out.println("[Sistema] Buscando actualización automática de tipo de cambio...");
+        boolean exito = actualizarDesdeInternet();
+        
+        if (exito) {
+            System.out.println("[Sistema] Tipo de cambio actualizado automáticamente a: $" + tipoCambioActual);
+        } else {
+            System.out.println("[Sistema] Fallo la actualización automática (posible error de red). Se usará el último valor guardado.");
+        }
     }
 }

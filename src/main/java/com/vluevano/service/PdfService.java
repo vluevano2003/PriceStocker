@@ -53,10 +53,10 @@ public class PdfService {
 
             PdfPTable table = new PdfPTable(6);
             table.setWidthPercentage(100);
-            table.setWidths(new float[] { 1f, 1.5f, 4.5f, 2f, 1.5f, 1.5f });
+            table.setWidths(new float[] { 1f, 1.5f, 4.5f, 2.5f, 1.5f, 1.5f });
             table.setSpacingBefore(20);
 
-            agregarCeldaEncabezado(table, "ID");
+            agregarCeldaEncabezado(table, "FOLIO");
             agregarCeldaEncabezado(table, "FECHA");
             agregarCeldaEncabezado(table, "PRODUCTOS");
             agregarCeldaEncabezado(table, "CLIENTE");
@@ -67,6 +67,10 @@ public class PdfService {
             double granTotal = 0;
             boolean esPar = false;
 
+            String monedaPref = monedaService.getMonedaPorDefecto();
+            double tc = monedaService.getTipoCambioActual();
+            if (tc == 0) tc = 20.0;
+
             for (Venta v : listaVentas) {
                 Color bgColor = esPar ? new Color(243, 244, 246) : Color.WHITE;
 
@@ -76,25 +80,36 @@ public class PdfService {
                 String detalleProductos = "Sin detalles";
                 if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
                     detalleProductos = v.getDetalles().stream()
-                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ")")
+                            .map(d -> "• " + d.getProducto().getNombreProducto() + " (x" + d.getCantidad() + ") - "
+                                    + formatPdfPrecio(d.getPrecioUnitario(), v.getMoneda()))
                             .collect(Collectors.joining("\n"));
                 }
                 PdfPCell cellProd = new PdfPCell(new Phrase(detalleProductos, FONT_DATA_SMALL));
                 estilizarCeldaDato(cellProd, Element.ALIGN_LEFT, bgColor);
                 table.addCell(cellProd);
 
-                agregarCeldaDato(table, v.getCliente() != null ? v.getCliente().getNombreCliente() : "Público General",
-                        Element.ALIGN_LEFT, bgColor);
+                agregarCeldaDato(table, v.getCliente() != null ? v.getCliente().getNombreCliente() : "Público General", Element.ALIGN_LEFT, bgColor);
                 agregarCeldaDato(table, v.getUsuario().getNombreUsuario(), Element.ALIGN_CENTER, bgColor);
 
-                String totalStr = String.format("$ %,.2f", v.getTotalVenta());
+                String totalStr = formatPdfPrecio(v.getTotalVenta(), v.getMoneda());
                 agregarCeldaDato(table, totalStr, Element.ALIGN_RIGHT, bgColor);
 
-                granTotal += v.getTotalVenta();
+                double totalDoc = v.getTotalVenta();
+                String monedaDoc = v.getMoneda() != null ? v.getMoneda() : "MXN";
+
+                if (monedaDoc.equalsIgnoreCase(monedaPref)) {
+                    granTotal += totalDoc;
+                } else {
+                    if (monedaPref.equalsIgnoreCase("MXN") && monedaDoc.equalsIgnoreCase("USD")) {
+                        granTotal += (totalDoc * tc);
+                    } else if (monedaPref.equalsIgnoreCase("USD") && monedaDoc.equalsIgnoreCase("MXN")) {
+                        granTotal += (totalDoc / tc); 
+                    }
+                }
                 esPar = !esPar;
             }
             document.add(table);
-            agregarSeccionTotal(document, "Total Ingresos:", granTotal);
+            agregarSeccionTotal(document, "Total Ingresos (" + monedaPref + "):", granTotal);
 
         } catch (DocumentException e) {
             throw new IOException("Error PDF Ventas", e);

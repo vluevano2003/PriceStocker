@@ -5,6 +5,7 @@ import com.vluevano.service.*;
 import com.vluevano.util.*;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -33,6 +34,8 @@ public class VentaView {
     @Autowired
     @Lazy
     private MenuPrincipalScreen menuPrincipalScreen;
+    @Autowired
+    private MonedaService monedaService;
 
     private Stage stage;
     private String usuarioActual;
@@ -43,12 +46,16 @@ public class VentaView {
     private ComboBox<Producto> cmbProducto;
     private TextField txtCantidad;
     private TextField txtPrecioVenta;
-    private Label lblTotal;
+    private Label lblMonedaSugerida;
     private Label lblStockActual;
 
+    private Label lblTotal;
+    private ComboBox<String> cmbMonedaVenta;
+    private Label lblTotalEquivalente;
+    private String monedaAnterior;
+
     /**
-     * Muestra la pantalla de venta
-     * 
+     * Muestra la pantalla de nueva venta, donde se pueden seleccionar cliente, producto, cantidad y precio para agregar al carrito de ventas, así como finalizar la venta con el total calculado y la moneda seleccionada
      * @param stage
      * @param usuarioActual
      */
@@ -56,6 +63,13 @@ public class VentaView {
         this.stage = stage;
         this.usuarioActual = usuarioActual;
         this.listaDetalles = FXCollections.observableArrayList();
+
+        monedaService.inicializar();
+
+        this.listaDetalles.addListener((ListChangeListener<DetalleVenta>) c -> {
+            actualizarEstadoControlesOrigen();
+            calcularTotalGeneral();
+        });
 
         BorderPane root = new BorderPane();
         root.setTop(UIFactory.crearHeader("Nueva Venta", "Registro de salida de mercancía",
@@ -66,7 +80,6 @@ public class VentaView {
         contenido.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
         VBox panelIzquierdo = crearPanelControl();
-
         VBox panelDerecho = crearPanelDetalle();
         HBox.setHgrow(panelDerecho, Priority.ALWAYS);
 
@@ -82,9 +95,7 @@ public class VentaView {
     }
 
     /**
-     * Crea el panel de control para seleccionar cliente, producto, cantidad y
-     * precio
-     * 
+     * Crea el panel de control en el lado izquierdo de la pantalla, donde se pueden seleccionar cliente, producto, cantidad y precio para agregar al carrito de ventas
      * @return
      */
     private VBox crearPanelControl() {
@@ -100,17 +111,12 @@ public class VentaView {
 
         cmbCliente.setConverter(new javafx.util.StringConverter<Cliente>() {
             @Override
-            public String toString(Cliente c) {
-                return (c != null) ? c.getNombreCliente() : "";
-            }
-
+            public String toString(Cliente c) { return (c != null) ? c.getNombreCliente() : ""; }
             @Override
-            public Cliente fromString(String string) {
-                return null;
-            }
+            public Cliente fromString(String string) { return null; }
         });
 
-        cmbCliente.setOnAction(e -> buscarPrecioPersonalizado());
+        cmbCliente.setOnAction(e -> actualizarInfoProducto());
 
         cmbProducto = new ComboBox<>();
         cmbProducto.setMaxWidth(Double.MAX_VALUE);
@@ -118,14 +124,9 @@ public class VentaView {
 
         cmbProducto.setConverter(new javafx.util.StringConverter<Producto>() {
             @Override
-            public String toString(Producto p) {
-                return (p != null) ? p.getNombreProducto() : "";
-            }
-
+            public String toString(Producto p) { return (p != null) ? p.getNombreProducto() : ""; }
             @Override
-            public Producto fromString(String string) {
-                return null;
-            }
+            public Producto fromString(String string) { return null; }
         });
 
         cmbProducto.setOnAction(e -> actualizarInfoProducto());
@@ -142,6 +143,10 @@ public class VentaView {
         };
         txtPrecioVenta.setTextFormatter(new TextFormatter<>(filterDouble));
 
+        lblMonedaSugerida = new Label("");
+        lblMonedaSugerida.setStyle("-fx-text-fill: #F97316; -fx-font-weight: bold; -fx-font-size: 11px;");
+        VBox boxCostoConMoneda = new VBox(2, txtPrecioVenta, lblMonedaSugerida);
+
         lblStockActual = new Label("Stock disponible: -");
         lblStockActual.setStyle("-fx-font-size: 12px; -fx-text-fill: #6B7280;");
 
@@ -156,15 +161,14 @@ public class VentaView {
                 UIFactory.crearTituloSeccion("Agregar Producto"),
                 UIFactory.crearGrupoInput("Buscar Producto", cmbProducto),
                 lblStockActual,
-                UIFactory.crearGrupoInput("Precio Unitario", txtPrecioVenta),
+                UIFactory.crearGrupoInput("Precio Unitario $", boxCostoConMoneda),
                 UIFactory.crearGrupoInput("Cantidad", txtCantidad),
                 btnAgregar);
         return box;
     }
 
     /**
-     * Crea el panel derecho con la tabla de detalles y el total
-     * 
+     * Crea el panel de detalle en el lado derecho de la pantalla, donde se muestra la tabla con los productos agregados al carrito de ventas, el total calculado, selector de moneda y botón para finalizar la venta
      * @return
      */
     @SuppressWarnings("unchecked")
@@ -177,23 +181,11 @@ public class VentaView {
         tablaDetalles.setItems(listaDetalles);
 
         String estiloThumb = "data:text/css," +
-                ".scroll-bar:vertical .thumb {" +
-                "    -fx-background-color: #DADADA;" +
-                "    -fx-background-insets: 0 4 0 4;" +
-                "    -fx-background-radius: 4;" +
-                "}" +
-                ".scroll-bar:horizontal .thumb {" +
-                "    -fx-background-color: #DADADA;" +
-                "    -fx-background-insets: 4 0 4 0;" +
-                "    -fx-background-radius: 4;" +
-                "}";
-
+                ".scroll-bar:vertical .thumb {-fx-background-color: #DADADA;-fx-background-insets: 0 4 0 4;-fx-background-radius: 4;}" +
+                ".scroll-bar:horizontal .thumb {-fx-background-color: #DADADA;-fx-background-insets: 4 0 4 0;-fx-background-radius: 4;}";
         tablaDetalles.getStylesheets().add(estiloThumb);
-
         tablaDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-
-        tablaDetalles.setStyle(
-                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+        tablaDetalles.setStyle("-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
 
         TableColumn<DetalleVenta, String> colProd = new TableColumn<>("Producto");
         colProd.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getProducto().getNombreProducto()));
@@ -202,16 +194,15 @@ public class VentaView {
         colCant.setCellValueFactory(d -> new SimpleStringProperty(String.valueOf(d.getValue().getCantidad())));
 
         TableColumn<DetalleVenta, String> colPrecio = new TableColumn<>("Precio U.");
-        colPrecio.setCellValueFactory(d -> new SimpleStringProperty("$" + d.getValue().getPrecioUnitario()));
+        colPrecio.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getPrecioUnitario())));
 
         TableColumn<DetalleVenta, String> colSub = new TableColumn<>("Subtotal");
-        colSub.setCellValueFactory(d -> new SimpleStringProperty("$" + d.getValue().getSubtotal()));
+        colSub.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getSubtotal())));
 
         TableColumn<DetalleVenta, Void> colAccion = new TableColumn<>("");
         colAccion.setCellFactory(param -> new TableCell<>() {
             private final Button btn = UIFactory.crearBotonTablaEliminar(() -> {
                 listaDetalles.remove(getIndex());
-                calcularTotalGeneral();
             });
 
             @Override
@@ -224,16 +215,55 @@ public class VentaView {
         tablaDetalles.getColumns().addAll(colProd, colCant, colPrecio, colSub, colAccion);
         VBox.setVgrow(tablaDetalles, Priority.ALWAYS);
 
+        cmbMonedaVenta = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
+        cmbMonedaVenta.setValue(monedaService.getMonedaPorDefecto());
+        monedaAnterior = cmbMonedaVenta.getValue();
+        cmbMonedaVenta.setStyle(AppTheme.STYLE_INPUT);
+
+        cmbMonedaVenta.setOnAction(e -> {
+            String nuevaMoneda = cmbMonedaVenta.getValue();
+            if (nuevaMoneda == null || nuevaMoneda.equals(monedaAnterior)) return;
+
+            double tc = monedaService.getTipoCambioActual();
+            if (tc == 0) tc = 20.0;
+
+            if (!listaDetalles.isEmpty()) {
+                for (DetalleVenta d : listaDetalles) {
+                    double precio = d.getPrecioUnitario();
+                    
+                    if (monedaAnterior.equals("MXN") && nuevaMoneda.equals("USD")) {
+                        precio = precio / tc;
+                    } else if (monedaAnterior.equals("USD") && nuevaMoneda.equals("MXN")) {
+                        precio = precio * tc;
+                    }
+                    
+                    d.setPrecioUnitario(precio);
+                    d.setSubtotal(d.getCantidad() * precio);
+                }
+                tablaDetalles.refresh();
+            }
+
+            monedaAnterior = nuevaMoneda;
+            calcularTotalGeneral();
+            actualizarInfoProducto();
+        });
+
+        lblTotalEquivalente = new Label("");
+        lblTotalEquivalente.setStyle("-fx-font-size: 14px; -fx-text-fill: #F97316; -fx-font-weight: bold;");
+
         lblTotal = new Label("Total: $0.00");
         lblTotal.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY);
+
+        VBox boxTotales = new VBox(0, lblTotal, lblTotalEquivalente);
+        boxTotales.setAlignment(Pos.CENTER_LEFT);
 
         Button btnFinalizar = UIFactory.crearBotonPrimario("FINALIZAR VENTA");
         btnFinalizar.setPrefHeight(50);
         btnFinalizar.setPrefWidth(200);
         btnFinalizar.setOnAction(e -> procesarVenta());
 
-        HBox footer = new HBox(20, lblTotal, new Region(), btnFinalizar);
-        HBox.setHgrow(footer.getChildren().get(1), Priority.ALWAYS);
+        HBox footer = new HBox(20, cmbMonedaVenta, boxTotales, new Region(), btnFinalizar);
+        HBox.setHgrow(footer.getChildren().get(3), Priority.ALWAYS);
         footer.setAlignment(Pos.CENTER_LEFT);
 
         box.getChildren().addAll(new Label("Detalle de la Venta"), tablaDetalles, new Separator(), footer);
@@ -241,7 +271,15 @@ public class VentaView {
     }
 
     /**
-     * Carga los clientes y productos en los ComboBox al iniciar la pantalla
+     * Actualiza el estado de los controles de selección de cliente y producto según si hay productos agregados al carrito de ventas, deshabilitando la selección de cliente si ya se han agregado productos para evitar inconsistencias en precios históricos y sugeridos
+     */
+    private void actualizarEstadoControlesOrigen() {
+        boolean hayItems = !listaDetalles.isEmpty();
+        cmbCliente.setDisable(hayItems);
+    }
+
+    /**
+     * Carga los catálogos de clientes y productos en los ComboBox correspondientes para que el usuario pueda seleccionar al agregar productos al carrito de ventas
      */
     private void cargarCatalogos() {
         cmbCliente.getItems().setAll(clienteService.consultarClientes());
@@ -249,54 +287,59 @@ public class VentaView {
     }
 
     /**
-     * Actualiza el stock disponible y el precio sugerido al cambiar de producto
+     * Actualiza la información mostrada sobre el producto seleccionado, incluyendo el stock disponible y el precio histórico de venta para ese producto y cliente, sugiriendo una conversión automática si la moneda de venta seleccionada es diferente a la del precio histórico
      */
     private void actualizarInfoProducto() {
         Producto p = cmbProducto.getValue();
+        Cliente c = cmbCliente.getValue();
+        
         if (p != null) {
             lblStockActual.setText("Stock disponible: " + p.getExistenciaProducto());
-            buscarPrecioPersonalizado();
+            
+            Double precioHistorico = ventaService.obtenerPrecioVenta(p, c);
+            String monedaHistorica = ventaService.obtenerMonedaVenta(p, c);
+            String monedaVentaSeleccionada = cmbMonedaVenta.getValue();
+
+            if (precioHistorico > 0) {
+                if (monedaHistorica.equalsIgnoreCase(monedaVentaSeleccionada)) {
+                    txtPrecioVenta.setText(String.format("%.2f", precioHistorico).replace(",", "."));
+                    lblMonedaSugerida.setText("Base: " + monedaHistorica);
+                } else {
+                    double tc = monedaService.getTipoCambioActual();
+                    if (tc == 0) tc = 20.0;
+                    double valorConvertido = monedaVentaSeleccionada.equals("MXN") 
+                        ? (precioHistorico * tc) 
+                        : (precioHistorico / tc);
+                    
+                    txtPrecioVenta.setText(String.format("%.2f", valorConvertido).replace(",", "."));
+                    lblMonedaSugerida.setText("Auto-conv. de " + monedaHistorica);
+                }
+            } else {
+                txtPrecioVenta.setText("0.00");
+                lblMonedaSugerida.setText("");
+            }
         } else {
+            lblStockActual.setText("Stock disponible: -");
             txtPrecioVenta.setText("0.00");
+            lblMonedaSugerida.setText("");
         }
     }
 
     /**
-     * Busca el precio personalizado para el producto-cliente seleccionado y lo
-     * muestra en el campo editable
-     */
-    private void buscarPrecioPersonalizado() {
-        Producto p = cmbProducto.getValue();
-        Cliente c = cmbCliente.getValue();
-
-        if (p != null) {
-            Double precioSugerido = ventaService.obtenerPrecioVenta(p, c);
-            if (precioSugerido == null)
-                precioSugerido = 0.0;
-            txtPrecioVenta.setText(String.valueOf(precioSugerido));
-        }
-    }
-
-    /**
-     * Agrega el producto seleccionado al carrito, validando cantidad, stock y
-     * precio. Si el producto ya está en el carrito, actualiza la cantidad y
-     * subtotal
+     * Agrega el producto seleccionado al carrito de ventas con la cantidad y precio especificados, validando que no se exceda el stock disponible y que los valores ingresados sean correctos, actualizando el subtotal del producto en el carrito y recalculando el total general de la venta
      */
     private void agregarProducto() {
         Producto p = cmbProducto.getValue();
-        if (p == null)
-            return;
+        if (p == null) return;
 
         try {
             int cantidadInput = Integer.parseInt(txtCantidad.getText());
             double precioFinal = Double.parseDouble(txtPrecioVenta.getText());
 
-            if (cantidadInput <= 0)
-                throw new NumberFormatException("Cantidad negativa");
+            if (cantidadInput <= 0) throw new NumberFormatException("Cantidad negativa");
 
             if (precioFinal < 0) {
-                dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Precio inválido",
-                        "El precio no puede ser negativo.", stage);
+                dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Precio inválido", "El precio no puede ser negativo.", stage);
                 return;
             }
 
@@ -309,8 +352,7 @@ public class VentaView {
 
             if (cantidadTotalDeseada > p.getExistenciaProducto()) {
                 int maximoPosible = p.getExistenciaProducto() - cantidadEnCarrito;
-                String msg = (maximoPosible > 0) ? "Solo puedes agregar " + maximoPosible + " más."
-                        : "No hay más stock.";
+                String msg = (maximoPosible > 0) ? "Solo puedes agregar " + maximoPosible + " más." : "No hay más stock.";
                 dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Stock insuficiente", msg, stage);
                 return;
             }
@@ -329,33 +371,46 @@ public class VentaView {
                 listaDetalles.add(d);
             }
 
-            calcularTotalGeneral();
             txtCantidad.setText("1");
+            cmbProducto.getSelectionModel().clearSelection();
+            cmbProducto.requestFocus();
 
         } catch (NumberFormatException e) {
-            dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "Verifica la cantidad y el precio.", stage);
+            dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error Numérico", "Verifica la cantidad y el precio.", stage);
         }
     }
 
     /**
-     * Calcula el total general sumando los subtotales de cada detalle y lo muestra
-     * en el label correspondiente
+     * Calcula el total general de la venta sumando los subtotales de cada producto en el carrito, actualiza el label del total y muestra una conversión aproximada a la moneda preferida del usuario si es diferente a la moneda de venta seleccionada
      */
     private void calcularTotalGeneral() {
         double total = listaDetalles.stream().mapToDouble(DetalleVenta::getSubtotal).sum();
         lblTotal.setText(String.format("Total: $%.2f", total));
+
+        String monedaSel = cmbMonedaVenta.getValue();
+        String monedaPref = monedaService.getMonedaPorDefecto();
+        double tc = monedaService.getTipoCambioActual();
+        if (tc == 0) tc = 20.0;
+
+        if (monedaSel != null && monedaSel.equalsIgnoreCase(monedaPref)) {
+            lblTotalEquivalente.setText(""); 
+        } else {
+            double equivalente;
+            if (monedaPref.equalsIgnoreCase("MXN")) {
+                equivalente = total * tc; 
+            } else {
+                equivalente = total / tc;
+            }
+            lblTotalEquivalente.setText(String.format("≈ $%.2f %s", equivalente, monedaPref));
+        }
     }
 
     /**
-     * Procesa la venta al hacer clic en el botón "Finalizar Venta". Valida que haya
-     * productos en el carrito, muestra una confirmación y luego registra la venta
-     * usando el servicio correspondiente. Si la venta se registra exitosamente,
-     * limpia el carrito y resetea los campos para una nueva venta
+     * Procesa la venta al confirmar con el usuario, creando un objeto Venta con los datos seleccionados, registrando la venta a través del servicio correspondiente y mostrando el resultado, limpiando el carrito y reseteando los controles si la venta se registró exitosamente
      */
     private void procesarVenta() {
         if (listaDetalles.isEmpty()) {
-            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Carrito vacío", "Agrega productos antes de vender.",
-                    stage);
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Vacío", "El carrito de ventas está vacío.", stage);
             return;
         }
 
@@ -363,16 +418,19 @@ public class VentaView {
             Venta v = new Venta();
             v.setCliente(cmbCliente.getValue());
             v.setTotalVenta(listaDetalles.stream().mapToDouble(DetalleVenta::getSubtotal).sum());
+            
+            v.setMoneda(cmbMonedaVenta.getValue());
+            v.setTipoCambio(monedaService.getTipoCambioActual());
 
             String resultado = ventaService.registrarVenta(v, new ArrayList<>(listaDetalles), usuarioActual);
 
             dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Venta", resultado, stage);
             if (resultado.contains("exitosamente")) {
                 listaDetalles.clear();
-                calcularTotalGeneral();
                 cargarCatalogos();
                 txtPrecioVenta.setText("0.00");
                 txtCantidad.setText("1");
+                lblMonedaSugerida.setText("");
                 cmbProducto.getSelectionModel().clearSelection();
                 cmbCliente.getSelectionModel().clearSelection();
             }

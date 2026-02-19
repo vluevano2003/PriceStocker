@@ -3,6 +3,7 @@ package com.vluevano.view;
 import com.vluevano.model.DetalleVenta;
 import com.vluevano.model.Venta;
 import com.vluevano.service.VentaService;
+import com.vluevano.service.MonedaService;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
 import javafx.beans.property.SimpleStringProperty;
@@ -38,19 +39,18 @@ public class HistorialVentasView {
     private PdfService pdfService;
     @Autowired
     private DialogService dialogService;
+    @Autowired
+    private MonedaService monedaService;
 
     private String usuarioActual;
     private TableView<Venta> tabla;
     private Stage stage;
     private Label lblPlaceholderDefault;
     private Label lblPlaceholderFiltro;
-
     private TextField txtBusqueda;
 
     /**
-     * Muestra la vista de historial de ventas en el escenario principal,
-     * configurando
-     * 
+     * Muestra la pantalla de historial de ventas
      * @param stage
      * @param usuarioActual
      */
@@ -68,9 +68,7 @@ public class HistorialVentasView {
     }
 
     /**
-     * Crea el contenido principal de la vista, incluyendo los filtros y la tabla de
-     * ventas
-     * 
+     * Crea el contenido principal de la pantalla, incluyendo filtros y tabla de ventas
      * @return
      */
     @SuppressWarnings("unchecked")
@@ -100,8 +98,7 @@ public class HistorialVentasView {
         });
 
         Button btnReporte = new Button("Exportar Reporte (PDF)");
-        btnReporte.setStyle(
-                "-fx-background-color: #1E7145; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 8 15;");
+        btnReporte.setStyle("-fx-background-color: #1E7145; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 8 15;");
         btnReporte.setOnAction(e -> {
             if (tabla.getItems().isEmpty()) {
                 dialogService.mostrarAlerta(Alert.AlertType.WARNING, "Sin datos", "No hay datos para exportar.", stage);
@@ -116,29 +113,19 @@ public class HistorialVentasView {
                 try {
                     String rango = "Del " + dpInicio.getValue() + " al " + dpFin.getValue();
                     pdfService.generarReporteVentas(file, tabla.getItems(), rango);
-                    dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito",
-                            "Reporte guardado: " + file.getName(), stage);
+                    dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Reporte guardado: " + file.getName(), stage);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error",
-                            "Error al crear PDF: " + ex.getMessage(), stage);
+                    dialogService.mostrarAlerta(Alert.AlertType.ERROR, "Error", "Error al crear PDF: " + ex.getMessage(), stage);
                 }
             }
         });
 
-        filtros.getChildren().addAll(
-                new Label("Buscar:"), txtBusqueda,
-                new Label("Desde:"), dpInicio,
-                new Label("Hasta:"), dpFin,
-                btnBuscar,
-                new Region(),
-                btnReporte);
+        filtros.getChildren().addAll(new Label("Buscar:"), txtBusqueda, new Label("Desde:"), dpInicio, new Label("Hasta:"), dpFin, btnBuscar, new Region(), btnReporte);
         HBox.setHgrow(filtros.getChildren().get(7), Priority.ALWAYS);
 
         tabla = new TableView<>();
-        tabla.setStyle(
-                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
-
+        tabla.setStyle("-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
         tabla.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(tabla, Priority.ALWAYS);
 
@@ -159,11 +146,9 @@ public class HistorialVentasView {
         colDetalles.setCellFactory(param -> new TableCell<>() {
             private final Button btnVer = new Button("Ver Productos");
             {
-                btnVer.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY
-                        + "; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-border-radius: 4;");
+                btnVer.setStyle("-fx-background-color: " + AppTheme.COLOR_PRIMARY + "; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-border-radius: 4;");
                 btnVer.setOnAction(event -> mostrarPopUpDetalles(getTableView().getItems().get(getIndex())));
             }
-
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -190,11 +175,11 @@ public class HistorialVentasView {
         colUsuario.setMaxWidth(120);
 
         TableColumn<Venta, String> colTotal = new TableColumn<>("Total");
-        colTotal.setCellValueFactory(
-                v -> new SimpleStringProperty(String.format("$%.2f", v.getValue().getTotalVenta())));
+        colTotal.setCellValueFactory(v -> new SimpleStringProperty(
+                formatearPrecioInteligente(v.getValue().getTotalVenta(), v.getValue().getMoneda())));
         colTotal.setStyle("-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
-        colTotal.setMinWidth(120);
-        colTotal.setMaxWidth(120);
+        colTotal.setMinWidth(240);
+        colTotal.setMaxWidth(280);
 
         tabla.getColumns().addAll(colId, colFecha, colDetalles, colCliente, colUsuario, colTotal);
 
@@ -209,8 +194,7 @@ public class HistorialVentasView {
     }
 
     /**
-     * Muestra un pop-up con los detalles de una venta específica
-     * 
+     * Muestra un pop-up con el detalle de los productos vendidos en una venta específica
      * @param venta
      */
     @SuppressWarnings("unchecked")
@@ -221,34 +205,19 @@ public class HistorialVentasView {
         VBox root = new VBox(15);
         root.setPadding(new Insets(20));
         root.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
-        root.setMinWidth(500);
+        root.setMinWidth(700);
         root.setMinHeight(400);
 
         Label lblTitulo = new Label("Detalle de Venta #" + venta.getIdventa());
-        lblTitulo
-                .setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
 
         TableView<DetalleVenta> tableDetalles = new TableView<>();
-
         String estiloThumb = "data:text/css," +
-                ".scroll-bar:vertical .thumb {" +
-                "    -fx-background-color: #DADADA;" +
-                "    -fx-background-insets: 0 4 0 4;" +
-                "    -fx-background-radius: 4;" +
-                "}" +
-                ".scroll-bar:horizontal .thumb {" +
-                "    -fx-background-color: #DADADA;" +
-                "    -fx-background-insets: 4 0 4 0;" +
-                "    -fx-background-radius: 4;" +
-                "}";
-
+                ".scroll-bar:vertical .thumb {-fx-background-color: #DADADA;-fx-background-insets: 0 4 0 4;-fx-background-radius: 4;}" +
+                ".scroll-bar:horizontal .thumb {-fx-background-color: #DADADA;-fx-background-insets: 4 0 4 0;-fx-background-radius: 4;}";
         tableDetalles.getStylesheets().add(estiloThumb);
-
         tableDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        tableDetalles.setStyle(
-                "-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
-
-        tableDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tableDetalles.setStyle("-fx-base: #111827; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
 
         TableColumn<DetalleVenta, String> colProd = new TableColumn<>("Producto");
         colProd.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getProducto().getNombreProducto()));
@@ -258,13 +227,16 @@ public class HistorialVentasView {
         colCant.setStyle("-fx-alignment: CENTER;");
 
         TableColumn<DetalleVenta, String> colPrecio = new TableColumn<>("P. Unitario");
-        colPrecio.setCellValueFactory(
-                d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getPrecioUnitario())));
+        colPrecio.setCellValueFactory(d -> new SimpleStringProperty(
+                formatearPrecioInteligente(d.getValue().getPrecioUnitario(), venta.getMoneda())));
         colPrecio.setStyle("-fx-alignment: CENTER-RIGHT;");
+        colPrecio.setMinWidth(180);
 
         TableColumn<DetalleVenta, String> colSub = new TableColumn<>("Subtotal");
-        colSub.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getSubtotal())));
+        colSub.setCellValueFactory(d -> new SimpleStringProperty(
+                formatearPrecioInteligente(d.getValue().getSubtotal(), venta.getMoneda())));
         colSub.setStyle("-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
+        colSub.setMinWidth(180);
 
         tableDetalles.getColumns().addAll(colProd, colCant, colPrecio, colSub);
 
@@ -279,13 +251,11 @@ public class HistorialVentasView {
         footer.setAlignment(Pos.CENTER_RIGHT);
 
         root.getChildren().addAll(lblTitulo, new Separator(), tableDetalles, footer);
-
         dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 
     /**
-     * Inicializa los placeholders para la tabla, diferenciando entre ausencia total
-     * de datos y ausencia por filtro
+     * Inicializa los labels que se mostrarán como placeholders en la tabla cuando no haya datos o no se encuentren resultados con el filtro aplicado
      */
     private void inicializarPlaceholders() {
         String estiloBase = "-fx-text-fill: #9CA3AF; -fx-font-size: 14px; -fx-font-weight: 500;";
@@ -296,35 +266,47 @@ public class HistorialVentasView {
     }
 
     /**
-     * Carga los datos de ventas en la tabla según el rango de fechas y el texto de
-     * búsqueda, aplicando filtros en memoria
-     * 
+     * Carga las ventas en la tabla según el rango de fechas seleccionado y el texto de búsqueda, aplicando los filtros correspondientes
      * @param inicio
      * @param fin
      * @param esFiltro
      */
     private void cargarDatos(LocalDate inicio, LocalDate fin, boolean esFiltro) {
         tabla.setPlaceholder(esFiltro ? lblPlaceholderFiltro : lblPlaceholderDefault);
-
         List<Venta> ventas = ventaService.obtenerVentasPorRango(inicio, fin);
-
         String busqueda = txtBusqueda.getText().trim().toLowerCase();
 
         if (!busqueda.isEmpty()) {
-            ventas = ventas.stream()
-                    .filter(v -> {
-                        boolean matchId = String.valueOf(v.getIdventa()).contains(busqueda);
-                        
-                        boolean matchCliente = v.getCliente() != null &&
-                                v.getCliente().getNombreCliente().toLowerCase().contains(busqueda);
-                        boolean matchUsuario = v.getUsuario() != null &&
-                                v.getUsuario().getNombreUsuario().toLowerCase().contains(busqueda);
-
-                        return matchId || matchCliente || matchUsuario;
-                    })
-                    .collect(Collectors.toList());
+            ventas = ventas.stream().filter(v -> {
+                boolean matchId = String.valueOf(v.getIdventa()).contains(busqueda);
+                boolean matchCliente = v.getCliente() != null && v.getCliente().getNombreCliente().toLowerCase().contains(busqueda);
+                boolean matchUsuario = v.getUsuario() != null && v.getUsuario().getNombreUsuario().toLowerCase().contains(busqueda);
+                return matchId || matchCliente || matchUsuario;
+            }).collect(Collectors.toList());
         }
-
         tabla.setItems(FXCollections.observableArrayList(ventas));
+    }
+
+    /**
+     * Formatea el precio de manera inteligente mostrando el valor original y una conversión aproximada a la moneda preferida del usuario si es diferente
+     * @param precio
+     * @param monedaItem
+     * @return
+     */
+    private String formatearPrecioInteligente(double precio, String monedaItem) {
+        if (monedaItem == null) monedaItem = "MXN";
+        String monedaPref = monedaService.getMonedaPorDefecto();
+        String textoOriginal = String.format("$%.2f %s", precio, monedaItem);
+
+        if (monedaItem.equalsIgnoreCase(monedaPref)) return textoOriginal;
+        
+        try {
+            double tipoCambio = monedaService.convertirAMxn(1.0, "USD");
+            if (tipoCambio == 0) tipoCambio = 20.0;
+            double precioConvertido = monedaPref.equalsIgnoreCase("MXN") ? (precio * tipoCambio) : (precio / tipoCambio);
+            return String.format("%s (≈ $%.2f %s)", textoOriginal, precioConvertido, monedaPref);
+        } catch (Exception e) {
+            return textoOriginal;
+        }
     }
 }

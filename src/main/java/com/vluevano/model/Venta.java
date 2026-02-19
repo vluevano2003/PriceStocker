@@ -27,6 +27,12 @@ public class Venta {
     @Column(name = "total_venta")
     private Double totalVenta;
 
+    @Column(name = "moneda", length = 3)
+    private String moneda;
+
+    @Column(name = "tipo_cambio")
+    private Double tipoCambio;
+
     @OneToMany(mappedBy = "venta", fetch = FetchType.EAGER)
     private List<DetalleVenta> detalles;
 }
