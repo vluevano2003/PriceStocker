@@ -1,6 +1,25 @@
 package com.vluevano.service;
 
+import com.vluevano.util.AppTheme;
+import com.vluevano.util.UIFactory;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import org.springframework.stereotype.Service;
+
 import java.io.*;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,13 +32,11 @@ public class UpdateService {
 
     private static final String GITHUB_USER = "vluevano2003";
     private static final String GITHUB_REPO = "PriceStocker";
-
-    private static final String VERSION_ACTUAL = "v1.2.1";
+    private static final String VERSION_ACTUAL = "v1.2.2";
 
     /**
-     * Este método busca actualizaciones en GitHub y, si encuentra una versión más
-     * nueva, la descarga e instala
-     * Se ejecuta en un hilo separado para no bloquear la interfaz gráfica
+     * Busca la última versión en GitHub y, si es mayor que la actual, muestra el
+     * modal de actualización
      */
     public void buscarYActualizar() {
         new Thread(() -> {
@@ -41,12 +58,12 @@ public class UpdateService {
                     System.out.println("Versión remota: " + versionRemota);
 
                     if (esVersionMayor(versionRemota, VERSION_ACTUAL)) {
-                        System.out.println("¡Nueva versión encontrada! Descargando...");
+                        System.out.println("¡Nueva versión encontrada! Avisando al usuario...");
 
                         String downloadUrl = "https://github.com/" + GITHUB_USER + "/" + GITHUB_REPO +
                                 "/releases/download/" + versionRemota + "/PriceStocker.exe";
 
-                        descargarEInstalar(downloadUrl);
+                        Platform.runLater(() -> mostrarDialogoActualizacion(versionRemota, downloadUrl));
                     } else {
                         System.out.println("El sistema está actualizado.");
                     }
@@ -58,8 +75,166 @@ public class UpdateService {
     }
 
     /**
-     * Descarga el nuevo EXE y ejecuta un script para reemplazar el actual al cerrar
-     * la aplicación
+     * Muestra el modal de actualización con la opción de descargar la nueva versión
+     * o posponerla
+     * 
+     * @param versionRemota
+     * @param downloadUrl
+     */
+    private void mostrarDialogoActualizacion(String versionRemota, String downloadUrl) {
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.initStyle(StageStyle.TRANSPARENT);
+
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(30));
+        root.setStyle(AppTheme.STYLE_DIALOG_BG + "-fx-background-radius: 8; -fx-border-radius: 8;");
+        root.setAlignment(Pos.CENTER);
+        root.setMaxWidth(400);
+        root.setMaxHeight(250);
+
+        Label lblTitulo = UIFactory.crearTituloSeccion("¡Nueva actualización disponible!");
+        lblTitulo
+                .setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+
+        Label lblMensaje = new Label("La versión " + versionRemota
+                + " de PriceStocker está lista.\n\n¿Deseas actualizar el sistema en este momento?\n(La aplicación se cerrará brevemente).");
+        lblMensaje.setStyle("-fx-text-fill: " + AppTheme.COLOR_TEXT_MAIN + "; -fx-font-size: 14px;");
+        lblMensaje.setWrapText(true);
+        lblMensaje.setAlignment(Pos.CENTER);
+        lblMensaje.setTextAlignment(TextAlignment.CENTER);
+
+        Button btnActualizar = UIFactory.crearBotonPrimario("Actualizar ahora");
+        Button btnCancelar = UIFactory.crearBotonSecundario("Más tarde");
+
+        btnCancelar.setOnAction(e -> stage.close());
+
+        btnActualizar.setOnAction(e -> {
+            stage.close();
+            mostrarDialogoDescargaYActualizar(downloadUrl);
+        });
+
+        HBox botones = new HBox(15, btnCancelar, btnActualizar);
+        botones.setAlignment(Pos.CENTER);
+        botones.setPadding(new Insets(10, 0, 0, 0));
+
+        root.getChildren().addAll(lblTitulo, lblMensaje, botones);
+
+        stage.setScene(crearEscenaConFondoOscuro(root, stage));
+        stage.show();
+    }
+
+    /**
+     * Muestra un modal con un indicador de progreso mientras se descarga la nueva
+     * versión e inicia el proceso de actualización
+     * 
+     * @param downloadUrl
+     */
+    private void mostrarDialogoDescargaYActualizar(String downloadUrl) {
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.initStyle(StageStyle.TRANSPARENT);
+
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(30, 40, 30, 40));
+        root.setStyle(AppTheme.STYLE_DIALOG_BG + "-fx-background-radius: 8; -fx-border-radius: 8;");
+        root.setAlignment(Pos.CENTER);
+        root.setMaxWidth(350);
+        root.setMaxHeight(200);
+
+        Label lblTitulo = UIFactory.crearTituloSeccion("Descargando...");
+        lblTitulo
+                .setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+
+        Label lblMensaje = new Label(
+                "Preparando la nueva versión, por favor espera.\nEl sistema se reiniciará automáticamente.");
+        lblMensaje.setStyle("-fx-text-fill: " + AppTheme.COLOR_TEXT_MAIN + "; -fx-font-size: 13px;");
+        lblMensaje.setTextAlignment(TextAlignment.CENTER);
+
+        ProgressIndicator pi = new ProgressIndicator();
+        pi.setStyle("-fx-progress-color: " + AppTheme.COLOR_PRIMARY + ";");
+
+        root.getChildren().addAll(lblTitulo, pi, lblMensaje);
+
+        stage.setScene(crearEscenaConFondoOscuro(root, stage));
+        stage.show();
+
+        new Thread(() -> {
+            try {
+                descargarEInstalar(downloadUrl);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Platform.runLater(() -> {
+                    stage.close();
+                    mostrarDialogoError();
+                });
+            }
+        }).start();
+    }
+
+    /**
+     * Muestra un modal de error si la descarga o instalación falla, con un mensaje
+     * amigable para el usuario
+     */
+    private void mostrarDialogoError() {
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.initStyle(StageStyle.TRANSPARENT);
+
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(25));
+        root.setStyle(AppTheme.STYLE_DIALOG_BG + "-fx-background-radius: 8; -fx-border-radius: 8;");
+        root.setAlignment(Pos.CENTER);
+        root.setMaxWidth(350);
+        root.setMaxHeight(200);
+
+        Label lblTitulo = new Label("Error de actualización");
+        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_ERROR + ";");
+
+        Label lblMensaje = new Label(
+                "Hubo un problema al descargar la actualización.\nVerifica tu conexión a internet e intenta más tarde.");
+        lblMensaje.setStyle("-fx-text-fill: " + AppTheme.COLOR_TEXT_MAIN + "; -fx-font-size: 14px;");
+        lblMensaje.setTextAlignment(TextAlignment.CENTER);
+
+        Button btnCerrar = UIFactory.crearBotonSecundario("Cerrar");
+        btnCerrar.setOnAction(e -> stage.close());
+
+        root.getChildren().addAll(lblTitulo, lblMensaje, btnCerrar);
+
+        stage.setScene(crearEscenaConFondoOscuro(root, stage));
+        stage.show();
+    }
+
+    /**
+     * Crea una escena con un fondo oscuro semitransparente y la cajita blanca
+     * centrada, adaptándose al tamaño de la ventana principal de PriceStocker
+     * 
+     * @param cajitaBlanca
+     * @param stage
+     * @return
+     */
+    private Scene crearEscenaConFondoOscuro(VBox cajitaBlanca, Stage stage) {
+        StackPane overlay = new StackPane(cajitaBlanca);
+        overlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.6);");
+        overlay.setAlignment(Pos.CENTER);
+
+        Scene scene = new Scene(overlay);
+        scene.setFill(Color.TRANSPARENT);
+
+        Window mainWindow = Window.getWindows().stream().filter(Window::isShowing).findFirst().orElse(null);
+        if (mainWindow != null) {
+            stage.initOwner(mainWindow);
+            overlay.setPrefSize(mainWindow.getWidth(), mainWindow.getHeight());
+            overlay.prefWidthProperty().bind(mainWindow.widthProperty());
+            overlay.prefHeightProperty().bind(mainWindow.heightProperty());
+        }
+
+        return scene;
+    }
+
+    /**
+     * Descarga el nuevo EXE desde GitHub y, si la descarga es exitosa, crea un
+     * script .bat para reemplazar el EXE actual y reiniciar la aplicación
      * 
      * @param urlDescarga
      * @throws IOException
@@ -77,12 +252,14 @@ public class UpdateService {
             crearYEjecutarScriptBat();
         } else {
             System.err.println("Error al descargar: " + response.statusCode());
+            throw new IOException("Código de respuesta HTTP: " + response.statusCode());
         }
     }
 
     /**
-     * Crea un archivo .bat que se ejecutará al cerrar la aplicación para reemplazar
-     * el EXE actual por el nuevo
+     * Crea un script .bat que espera a que PriceStocker se cierre, reemplaza el EXE
+     * actual con el nuevo descargado y luego reinicia la aplicación. Finalmente,
+     * elimina el script para no dejar rastros
      * 
      * @throws IOException
      */
@@ -105,8 +282,8 @@ public class UpdateService {
     }
 
     /**
-     * Compara dos versiones en formato "vX.Y.Z" para determinar si la remota es
-     * mayor que la local
+     * Compara dos versiones en formato "vX.Y.Z" y determina si la versión remota es
+     * mayor que la local, manejando correctamente casos como "v1.10.0" vs "v1.9.5"
      * 
      * @param remota
      * @param local
@@ -134,8 +311,8 @@ public class UpdateService {
     }
 
     /**
-     * Extrae el valor de una clave específica de un JSON simple (sin librerías
-     * externas)
+     * Extrae el valor de una clave específica de un JSON simple sin usar librerías
+     * externas, asumiendo que el formato es {"key": "value", ...}
      * 
      * @param json
      * @param key
@@ -144,11 +321,13 @@ public class UpdateService {
     private String extraerValorJson(String json, String key) {
         String search = "\"" + key + "\"";
         int keyIndex = json.indexOf(search);
-        if (keyIndex == -1) return "";
+        if (keyIndex == -1)
+            return "";
         int colonIndex = json.indexOf(":", keyIndex);
         int startQuote = json.indexOf("\"", colonIndex) + 1;
         int endQuote = json.indexOf("\"", startQuote);
-        if (startQuote == 0 || endQuote == -1) return "";
+        if (startQuote == 0 || endQuote == -1)
+            return "";
         return json.substring(startQuote, endQuote);
     }
 }
