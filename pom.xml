@@ -12,7 +12,7 @@
 
   <groupId>com.vluevano</groupId>
   <artifactId>pricestocker</artifactId>
-  <version>1.2.4</version>
+  <version>1.2.5</version>
   <name>pricestocker</name>
   <description>Sistema de Inventario con Spring Boot y JavaFX</description>
 
