@@ -12,7 +12,7 @@
 
   <groupId>com.vluevano</groupId>
   <artifactId>pricestocker</artifactId>
-  <version>1.2.1</version>
+  <version>1.2.2</version>
   <name>pricestocker</name>
   <description>Sistema de Inventario con Spring Boot y JavaFX</description>
 
@@ -149,6 +149,29 @@
                 <internalName>pricestocker</internalName>
                 <originalFilename>PriceStocker.exe</originalFilename>
               </versionInfo>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.1</version>
+        <executions>
+          <execution>
+            <id>inno-setup</id>
+            <phase>package</phase> 
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>C:\Program Files (x86)\Inno Setup 6\ISCC.exe</executable>
+              <arguments>
+                <argument>${project.basedir}\instalador.iss</argument>
+                
+                <argument>/DMyAppVersion=${project.version}</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
