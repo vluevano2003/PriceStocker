@@ -14,7 +14,7 @@ public class UpdateService {
     private static final String GITHUB_USER = "vluevano2003";
     private static final String GITHUB_REPO = "PriceStocker";
 
-    private static final String VERSION_ACTUAL = "v1.2.0";
+    private static final String VERSION_ACTUAL = "v1.2.1";
 
     /**
      * Este método busca actualizaciones en GitHub y, si encuentra una versión más
@@ -142,12 +142,13 @@ public class UpdateService {
      * @return
      */
     private String extraerValorJson(String json, String key) {
-        String search = "\"" + key + "\":\"";
-        int start = json.indexOf(search);
-        if (start == -1)
-            return "";
-        start += search.length();
-        int end = json.indexOf("\"", start);
-        return json.substring(start, end);
+        String search = "\"" + key + "\"";
+        int keyIndex = json.indexOf(search);
+        if (keyIndex == -1) return "";
+        int colonIndex = json.indexOf(":", keyIndex);
+        int startQuote = json.indexOf("\"", colonIndex) + 1;
+        int endQuote = json.indexOf("\"", startQuote);
+        if (startQuote == 0 || endQuote == -1) return "";
+        return json.substring(startQuote, endQuote);
     }
 }
