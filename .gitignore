@@ -1,0 +1,43 @@
+# --- MAVEN (Lo que se genera al compilar) ---
+target/
+*.jar
+*.war
+*.ear
+dependency-reduced-pom.xml
+
+# --- IDE (Configuraciones de tu editor que no le sirven a otros) ---
+.vscode/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+bin/
+
+# --- ARCHIVOS DEL SISTEMA OPERATIVO ---
+.DS_Store
+Thumbs.db
+
+# --- BASE DE DATOS LOCALES (¡Muy importante!) ---
+# Ignora archivos de base de datos H2 para no subir tus datos de prueba
+*.mv.db
+*.trace.db
+/data/
+
+# --- ARCHIVOS TEMPORALES DE ACTUALIZACIÓN ---
+# Estos los crea tu programa al actualizarse, no los subas
+update.tmp
+updater.bat
+
+# --- DISTRIBUCIÓN Y JRE (¡CRÍTICO!) ---
+# No subas la carpeta de Java, pesa mucho y se descarga aparte
+jre/
+jdk-*/
+*.zip
+
+# --- LOGS Y ERRORES ---
+*.log
+hs_err_pid*
+
+# Configuración de Spring
+src/main/resources/application.properties

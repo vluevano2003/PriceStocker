@@ -1,0 +1,49 @@
+-- Hacer opcionales los campos de dirección en CLIENTE
+ALTER TABLE cliente ALTER COLUMN cpcliente DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN noextcliente DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN municipio DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN estado DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN calle DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN colonia DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN ciudad DROP NOT NULL;
+ALTER TABLE cliente ALTER COLUMN pais DROP NOT NULL;
+
+-- Hacer opcionales los campos de dirección en PROVEEDOR
+ALTER TABLE proveedor ALTER COLUMN cpproveedor DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN noextprov DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN municipio DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN estado DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN calle DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN colonia DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN ciudad DROP NOT NULL;
+ALTER TABLE proveedor ALTER COLUMN pais DROP NOT NULL;
+
+-- Hacer opcionales los campos de dirección en EMPRESA
+ALTER TABLE empresa ALTER COLUMN cpempresa DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN noextempresa DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN municipio DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN estado DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN calle DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN colonia DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN ciudad DROP NOT NULL;
+ALTER TABLE empresa ALTER COLUMN pais DROP NOT NULL;
+
+-- Hacer opcionales los campos de dirección en FABRICANTE
+ALTER TABLE fabricante ALTER COLUMN cpfabricante DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN noextfabricante DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN municipio DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN estado DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN calle DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN colonia DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN ciudad DROP NOT NULL;
+ALTER TABLE fabricante ALTER COLUMN pais DROP NOT NULL;
+
+-- Hacer opcionales los campos de dirección en PRESTADORSERVICIO
+ALTER TABLE prestadorservicio ALTER COLUMN cpprestador DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN noextprestador DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN municipio DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN estado DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN calle DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN colonia DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN ciudad DROP NOT NULL;
+ALTER TABLE prestadorservicio ALTER COLUMN pais DROP NOT NULL;

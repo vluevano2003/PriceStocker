@@ -1,0 +1,1 @@
+INSERT INTO configuracion (clave, valor) VALUES ('IDIOMA_SISTEMA', 'es');
