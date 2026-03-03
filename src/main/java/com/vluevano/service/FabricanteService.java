@@ -67,10 +67,6 @@ public class FabricanteService {
             }
         }
 
-        if (String.valueOf(fabricante.getCpFabricante()).length() != 5) {
-            return idioma.get("srv.manufacturer.val.cp");
-        }
-
         try {
             fabricanteRepository.save(fabricante);
             return idioma.get("srv.manufacturer.msg.success");

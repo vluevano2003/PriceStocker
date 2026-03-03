@@ -2,10 +2,14 @@ package com.vluevano.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Entity
 @Table(name = "productoproveedor")
 @Data
+@EqualsAndHashCode(of = "id")
+@ToString(exclude = {"producto", "proveedor"}) 
 public class ProductoProveedor {
 
     @EmbeddedId

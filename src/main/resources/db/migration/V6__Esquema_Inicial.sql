@@ -1,0 +1,1 @@
+ALTER TABLE usuario ALTER COLUMN idusuario RESTART WITH (SELECT MAX(idusuario) + 1 FROM usuario);
