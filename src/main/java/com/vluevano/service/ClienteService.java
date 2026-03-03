@@ -67,10 +67,6 @@ public class ClienteService {
             }
         }
 
-        if (String.valueOf(cliente.getCpCliente()).length() != 5) {
-            return idioma.get("srv.client.val.cp");
-        }
-
         try {
             clienteRepository.save(cliente);
             return idioma.get("srv.client.msg.success");

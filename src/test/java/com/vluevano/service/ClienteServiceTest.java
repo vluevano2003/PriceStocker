@@ -110,18 +110,6 @@ class ClienteServiceTest {
     }
 
     @Test
-    @DisplayName("Falla si CP no tiene 5 dígitos")
-    void testGuardar_CPInvalido() {
-        Cliente c = new Cliente();
-        c.setNombreCliente("Juan");
-        c.setTelefonoCliente("1234567890");
-        c.setCorreoCliente("juan@mail.com");
-
-        c.setCpCliente(9640); // 4 dígitos
-        assertEquals("srv.client.val.cp", clienteService.guardarCliente(c));
-    }
-
-    @Test
     @DisplayName("Guarda exitosamente con datos válidos")
     void testGuardar_Exito() {
         Cliente c = new Cliente();

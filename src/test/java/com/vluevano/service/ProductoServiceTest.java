@@ -96,12 +96,12 @@ class ProductoServiceTest {
     }
 
     @Test
-    @DisplayName("Guarda un producto con Categorías existentes")
+    @DisplayName("Guarda un producto con Categorías existentes (Actualización)")
     void testGuardar_ConCategorias() {
         Producto p = new Producto();
+        p.setIdProducto(1); 
         p.setNombreProducto("Cemento");
 
-        // Simulamos una categoría seleccionada en la UI
         Categoria cat = new Categoria();
         cat.setIdCategoria(5);
         
@@ -109,14 +109,14 @@ class ProductoServiceTest {
         categorias.add(cat);
         p.setCategorias(categorias);
 
-        // Simulamos que el repo de categorías devuelve la referencia
+        when(productoRepository.findById(1)).thenReturn(Optional.of(p));
+
         when(categoriaRepository.getReferenceById(5)).thenReturn(cat);
 
         String res = productoService.guardarProducto(p);
 
-        // AHORA ESPERA LA LLAVE DE ÉXITO
         assertEquals("srv.product.msg.success", res);
-        verify(categoriaRepository).getReferenceById(5); // Verificamos que buscó la categoría
+        verify(categoriaRepository).getReferenceById(5);
         verify(productoRepository).save(p);
     }
 

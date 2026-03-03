@@ -34,7 +34,7 @@ public class UpdateService {
 
     private static final String GITHUB_USER = "vluevano2003";
     private static final String GITHUB_REPO = "PriceStocker";
-    private static final String VERSION_ACTUAL = "v1.4.0";
+    private static final String VERSION_ACTUAL = "v1.4.1";
 
     @Autowired
     private GestorIdioma idioma;

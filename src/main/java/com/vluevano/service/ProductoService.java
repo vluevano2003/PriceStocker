@@ -3,7 +3,7 @@ package com.vluevano.service;
 import com.vluevano.model.*;
 import com.vluevano.repository.*;
 import com.vluevano.util.GestorIdioma;
-import org.hibernate.Hibernate; 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductoService {
@@ -33,7 +34,9 @@ public class ProductoService {
     private GestorIdioma idioma;
 
     /**
-     * Consulta todos los productos disponibles en la base de datos. Retorna una lista de productos, o una lista vacía si no hay productos registrados
+     * Consulta todos los productos disponibles en la base de datos. Retorna una
+     * lista de productos, o una lista vacía si no hay productos registrados
+     * 
      * @return
      */
     public List<Producto> consultarProductos() {
@@ -41,7 +44,11 @@ public class ProductoService {
     }
 
     /**
-     * Busca productos que coincidan con el filtro proporcionado. El filtro se aplica a campos como nombre, descripción, categoría, proveedor, cliente, fabricante o empresa. Retorna una lista de productos que coincidan con el filtro, o una lista vacía si no se encuentran coincidencias
+     * Busca productos que coincidan con el filtro proporcionado. El filtro se
+     * aplica a campos como nombre, descripción, categoría, proveedor, cliente,
+     * fabricante o empresa. Retorna una lista de productos que coincidan con el
+     * filtro, o una lista vacía si no se encuentran coincidencias
+     * 
      * @param filtro
      * @return
      */
@@ -52,7 +59,9 @@ public class ProductoService {
     }
 
     /**
-     * Consulta todas las categorías disponibles en la base de datos. Retorna una lista de categorías, o una lista vacía si no hay categorías registradas
+     * Consulta todas las categorías disponibles en la base de datos. Retorna una
+     * lista de categorías, o una lista vacía si no hay categorías registradas
+     * 
      * @return
      */
     public List<Categoria> obtenerCategorias() {
@@ -60,7 +69,9 @@ public class ProductoService {
     }
 
     /**
-     * Consulta todos los proveedores disponibles en la base de datos. Retorna una lista de proveedores, o una lista vacía si no hay proveedores registrados
+     * Consulta todos los proveedores disponibles en la base de datos. Retorna una
+     * lista de proveedores, o una lista vacía si no hay proveedores registrados
+     * 
      * @return
      */
     public List<Proveedor> obtenerProveedores() {
@@ -68,7 +79,9 @@ public class ProductoService {
     }
 
     /**
-     * Consulta todos los clientes disponibles en la base de datos. Retorna una lista de clientes, o una lista vacía si no hay clientes registrados
+     * Consulta todos los clientes disponibles en la base de datos. Retorna una
+     * lista de clientes, o una lista vacía si no hay clientes registrados
+     * 
      * @return
      */
     public List<Cliente> obtenerClientes() {
@@ -76,7 +89,9 @@ public class ProductoService {
     }
 
     /**
-     * Consulta todos los fabricantes disponibles en la base de datos. Retorna una lista de fabricantes, o una lista vacía si no hay fabricantes registrados
+     * Consulta todos los fabricantes disponibles en la base de datos. Retorna una
+     * lista de fabricantes, o una lista vacía si no hay fabricantes registrados
+     * 
      * @return
      */
     public List<Fabricante> obtenerFabricantes() {
@@ -84,7 +99,9 @@ public class ProductoService {
     }
 
     /**
-     * Consulta todas las empresas disponibles en la base de datos. Retorna una lista de empresas, o una lista vacía si no hay empresas registradas
+     * Consulta todas las empresas disponibles en la base de datos. Retorna una
+     * lista de empresas, o una lista vacía si no hay empresas registradas
+     * 
      * @return
      */
     public List<Empresa> obtenerEmpresas() {
@@ -92,7 +109,9 @@ public class ProductoService {
     }
 
     /**
-     * Consulta todos los servicios disponibles en la base de datos. Retorna una lista de servicios, o una lista vacía si no hay servicios registrados
+     * Consulta todos los servicios disponibles en la base de datos. Retorna una
+     * lista de servicios, o una lista vacía si no hay servicios registrados
+     * 
      * @return
      */
     public List<Servicio> obtenerServicios() {
@@ -100,7 +119,10 @@ public class ProductoService {
     }
 
     /**
-     * Consulta un producto por su ID y carga todas sus asociaciones para evitar problemas de LazyInitializationException. Retorna el producto con sus asociaciones cargadas, o null si no se encuentra el producto
+     * Consulta un producto por su ID y carga todas sus asociaciones para evitar
+     * problemas de LazyInitializationException. Retorna el producto con sus
+     * asociaciones cargadas, o null si no se encuentra el producto
+     * 
      * @param id
      * @return
      */
@@ -121,7 +143,12 @@ public class ProductoService {
     }
 
     /**
-     * Guarda un producto en la base de datos. Si el producto tiene categorías, proveedores, clientes, fabricantes o empresas asociadas, se aseguran de que estén correctamente referenciados antes de guardar. Retorna un mensaje indicando el resultado de la operación, ya sea éxito o error con detalles del mismo
+     * Guarda un producto en la base de datos. Si el producto tiene categorías,
+     * proveedores, clientes, fabricantes o empresas asociadas, se aseguran de que
+     * estén correctamente referenciados antes de guardar. Retorna un mensaje
+     * indicando el resultado de la operación, ya sea éxito o error con detalles del
+     * mismo
+     * 
      * @param producto
      * @return
      */
@@ -132,79 +159,135 @@ public class ProductoService {
         }
 
         try {
-            if (producto.getCategorias() != null && !producto.getCategorias().isEmpty()) {
-                List<Categoria> categoriasProcesadas = new ArrayList<>();
+            Producto productoAGuardar;
 
-                for (Categoria cat : producto.getCategorias()) {
-                    if (cat.getIdCategoria() != null) {
-                        categoriasProcesadas.add(categoriaRepository.getReferenceById(cat.getIdCategoria()));
-                    } else {
-                        Categoria nuevaGuardada = categoriaRepository.save(cat);
-                        categoriasProcesadas.add(nuevaGuardada);
+            if (producto.getIdProducto() != null) {
+                productoAGuardar = productoRepository.findById(producto.getIdProducto())
+                        .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+                productoAGuardar.setNombreProducto(producto.getNombreProducto());
+                productoAGuardar.setFichaProducto(producto.getFichaProducto());
+                productoAGuardar.setAlternoProducto(producto.getAlternoProducto());
+                productoAGuardar.setExistenciaProducto(producto.getExistenciaProducto());
+                productoAGuardar.setPrecioProducto(producto.getPrecioProducto());
+                productoAGuardar.setMonedaProducto(producto.getMonedaProducto());
+
+                if (producto.getCategorias() != null) {
+                    List<Categoria> catsVivas = new ArrayList<>();
+                    for (Categoria c : producto.getCategorias()) {
+                        catsVivas.add(c.getIdCategoria() != null
+                                ? categoriaRepository.getReferenceById(c.getIdCategoria())
+                                : categoriaRepository.save(c));
                     }
+                    productoAGuardar.getCategorias().clear();
+                    productoAGuardar.getCategorias().addAll(catsVivas);
                 }
-                producto.setCategorias(categoriasProcesadas);
-            }
 
-            if (producto.getServicios() != null && !producto.getServicios().isEmpty()) {
-                List<Servicio> serviciosVivos = new ArrayList<>();
-                for (Servicio serv : producto.getServicios()) {
-                    serviciosVivos.add(servicioRepository.getReferenceById(serv.getIdServicio()));
-                }
-                producto.setServicios(serviciosVivos);
-            }
+                actualizarRelaciones(producto, productoAGuardar);
 
-            if (producto.getProductoProveedores() != null) {
-                producto.getProductoProveedores().forEach(pp -> {
-                    pp.setProducto(producto);
-                    if (pp.getProveedor() != null) {
+            } else {
+                productoAGuardar = producto;
+
+                if (producto.getProductoProveedores() != null) {
+                    producto.getProductoProveedores().forEach(pp -> {
+                        pp.setProducto(producto);
                         pp.setProveedor(proveedorRepository.getReferenceById(pp.getProveedor().getIdProveedor()));
-                    }
-                });
-            }
-
-            if (producto.getProductoClientes() != null) {
-                producto.getProductoClientes().forEach(pc -> {
-                    pc.setProducto(producto);
-                    if (pc.getCliente() != null) {
+                        pp.getId().setIdProveedor(pp.getProveedor().getIdProveedor());
+                    });
+                }
+                if (producto.getProductoClientes() != null) {
+                    producto.getProductoClientes().forEach(pc -> {
+                        pc.setProducto(producto);
                         pc.setCliente(clienteRepository.getReferenceById(pc.getCliente().getIdCliente()));
-                    }
-                });
-            }
-
-            if (producto.getProductoFabricantes() != null) {
-                producto.getProductoFabricantes().forEach(pf -> {
-                    pf.setProducto(producto);
-                    if (pf.getFabricante() != null) {
+                        pc.getId().setIdCliente(pc.getCliente().getIdCliente());
+                    });
+                }
+                if (producto.getProductoFabricantes() != null) {
+                    producto.getProductoFabricantes().forEach(pf -> {
+                        pf.setProducto(producto);
                         pf.setFabricante(fabricanteRepository.getReferenceById(pf.getFabricante().getIdFabricante()));
-                    }
-                });
-            }
-
-            if (producto.getProductoEmpresas() != null) {
-                producto.getProductoEmpresas().forEach(pe -> {
-                    pe.setProducto(producto);
-                    if (pe.getEmpresa() != null) {
+                        pf.getId().setIdFabricante(pf.getFabricante().getIdFabricante());
+                    });
+                }
+                if (producto.getProductoEmpresas() != null) {
+                    producto.getProductoEmpresas().forEach(pe -> {
+                        pe.setProducto(producto);
                         pe.setEmpresa(empresaRepository.getReferenceById(pe.getEmpresa().getIdEmpresa()));
-                    }
-                });
+                        pe.getId().setIdEmpresa(pe.getEmpresa().getIdEmpresa());
+                    });
+                }
             }
-            productoRepository.save(producto);
 
+            productoRepository.save(productoAGuardar);
             return idioma.get("srv.product.msg.success");
 
         } catch (Exception e) {
             e.printStackTrace();
-            Throwable rootCause = e;
-            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
-                rootCause = rootCause.getCause();
-            }
-            return idioma.get("srv.product.msg.error") + " " + rootCause.getMessage();
+            return idioma.get("srv.product.msg.error") + " " + e.getMessage();
         }
     }
 
     /**
-     * Elimina un producto de la base de datos. Retorna true si la eliminación fue exitosa, o false si ocurrió un error
+     * Actualiza las relaciones de un producto con proveedores, clientes,
+     * fabricantes y empresas. Este método se encarga de limpiar las relaciones
+     * existentes y establecer las nuevas
+     * basándose en el producto proporcionado. Se asegura de que las referencias a
+     * entidades relacionadas sean válidas y estén actualizadas antes de guardar el
+     * producto
+     * 
+     * @param producto
+     * @param productoAGuardar
+     */
+    private void actualizarRelaciones(Producto producto, Producto productoAGuardar) {
+        productoAGuardar.getProductoProveedores().clear();
+        if (producto.getProductoProveedores() != null) {
+            producto.getProductoProveedores().forEach(pp -> {
+                pp.setProducto(productoAGuardar);
+                pp.setProveedor(proveedorRepository.getReferenceById(pp.getProveedor().getIdProveedor()));
+                pp.getId().setIdProducto(productoAGuardar.getIdProducto());
+                pp.getId().setIdProveedor(pp.getProveedor().getIdProveedor());
+                productoAGuardar.getProductoProveedores().add(pp);
+            });
+        }
+
+        productoAGuardar.getProductoClientes().clear();
+        if (producto.getProductoClientes() != null) {
+            producto.getProductoClientes().forEach(pc -> {
+                pc.setProducto(productoAGuardar);
+                pc.setCliente(clienteRepository.getReferenceById(pc.getCliente().getIdCliente()));
+                pc.getId().setIdProducto(productoAGuardar.getIdProducto());
+                pc.getId().setIdCliente(pc.getCliente().getIdCliente());
+                productoAGuardar.getProductoClientes().add(pc);
+            });
+        }
+
+        productoAGuardar.getProductoFabricantes().clear();
+        if (producto.getProductoFabricantes() != null) {
+            producto.getProductoFabricantes().forEach(pf -> {
+                pf.setProducto(productoAGuardar);
+                pf.setFabricante(fabricanteRepository.getReferenceById(pf.getFabricante().getIdFabricante()));
+                pf.getId().setIdProducto(productoAGuardar.getIdProducto());
+                pf.getId().setIdFabricante(pf.getFabricante().getIdFabricante());
+                productoAGuardar.getProductoFabricantes().add(pf);
+            });
+        }
+
+        productoAGuardar.getProductoEmpresas().clear();
+        if (producto.getProductoEmpresas() != null) {
+            producto.getProductoEmpresas().forEach(pe -> {
+                pe.setProducto(productoAGuardar);
+                pe.setEmpresa(empresaRepository.getReferenceById(pe.getEmpresa().getIdEmpresa()));
+                pe.getId().setIdProducto(productoAGuardar.getIdProducto());
+                pe.getId().setIdEmpresa(pe.getEmpresa().getIdEmpresa());
+                productoAGuardar.getProductoEmpresas().add(pe);
+            });
+        }
+    }
+
+    /**
+     * Elimina un producto de la base de datos. Retorna true si la eliminación fue
+     * exitosa, o false si ocurrió un error
+     * 
      * @param producto
      * @return
      */

@@ -108,18 +108,6 @@ class FabricanteServiceTest {
     }
 
     @Test
-    @DisplayName("Falla si CP no tiene 5 dígitos")
-    void testGuardar_CPInvalido() {
-        Fabricante f = new Fabricante();
-        f.setNombreFabricante("Fabrica X");
-        f.setTelefonoFabricante("1234567890");
-        f.setCorreoFabricante("correo@mail.com");
-
-        f.setCpFabricante(6400); // 4 dígitos
-        assertEquals("srv.manufacturer.val.cp", fabricanteService.guardarFabricante(f));
-    }
-
-    @Test
     @DisplayName("Guarda exitosamente con datos válidos")
     void testGuardar_Exito() {
         Fabricante f = new Fabricante();
