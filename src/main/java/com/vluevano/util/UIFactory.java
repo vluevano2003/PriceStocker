@@ -41,11 +41,12 @@ public class UIFactory {
      */
     public static Button crearBotonPrimario(String texto) {
         Button btn = new Button(texto);
-        btn.setPrefHeight(40);
+        btn.setPrefHeight(42);
+        btn.setPadding(new Insets(8, 20, 8, 20));
         String styleBase = "-fx-background-color: " + AppTheme.COLOR_PRIMARY
-                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(249, 115, 22, 0.3), 10, 0, 0, 4);";
         String styleHover = "-fx-background-color: " + AppTheme.COLOR_PRIMARY_HOVER
-                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 8; -fx-cursor: hand;";
+                + "; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(234, 88, 12, 0.4), 12, 0, 0, 5);";
         btn.setStyle(styleBase);
         btn.setOnMouseEntered(e -> btn.setStyle(styleHover));
         btn.setOnMouseExited(e -> btn.setStyle(styleBase));
@@ -59,9 +60,10 @@ public class UIFactory {
      */
     public static Button crearBotonSecundario(String texto) {
         Button btn = new Button(texto);
-        btn.setPrefHeight(35);
-        String styleBase = "-fx-background-color: white; -fx-border-color: #D1D5DB; -fx-text-fill: #374151; -fx-font-weight: 600; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;";
-        String styleHover = "-fx-background-color: #F9FAFB; -fx-border-color: #9CA3AF; -fx-text-fill: #111827; -fx-font-weight: 600; -fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand;";
+        btn.setPrefHeight(42);
+        btn.setPadding(new Insets(8, 20, 8, 20));
+        String styleBase = "-fx-background-color: white; -fx-border-color: #E2E8F0; -fx-text-fill: #374151; -fx-font-weight: 600; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.02), 5, 0, 0, 2);";
+        String styleHover = "-fx-background-color: #F8FAFC; -fx-border-color: #CBD5E1; -fx-text-fill: #111827; -fx-font-weight: 600; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 8, 0, 0, 3);";
         btn.setStyle(styleBase);
         btn.setOnMouseEntered(e -> btn.setStyle(styleHover));
         btn.setOnMouseExited(e -> btn.setStyle(styleBase));
@@ -107,13 +109,13 @@ public class UIFactory {
         HBox header = new HBox(20);
         header.setPadding(new Insets(20, 40, 20, 40));
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setStyle("-fx-background-color: #111827; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);");
+        header.setStyle("-fx-background-color: white; -fx-border-color: transparent transparent #E2E8F0 transparent; -fx-border-width: 0 0 1px 0; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.02), 5, 0, 0, 2);");
 
         Label lblTitulo = new Label(titulo);
-        lblTitulo.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: white;");
+        lblTitulo.setStyle("-fx-font-family: 'Segoe UI', sans-serif; -fx-font-size: 26px; -fx-font-weight: 700; -fx-text-fill: #111827;");
 
         Label lblSubtitulo = new Label(subtitulo);
-        lblSubtitulo.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-text-fill: #e0e0e0;");
+        lblSubtitulo.setStyle("-fx-font-family: 'Segoe UI', sans-serif; -fx-font-size: 15px; -fx-text-fill: #6B7280;");
 
         VBox textosContainer = new VBox(2, lblTitulo, lblSubtitulo);
         textosContainer.setAlignment(Pos.CENTER_LEFT);
@@ -232,7 +234,7 @@ public class UIFactory {
         table.setItems(items);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setPrefHeight(150);
-        table.setStyle("-fx-base: #202020; -fx-control-inner-background: white; -fx-background-color: white; -fx-table-cell-border-color: #E5E7EB; -fx-table-header-border-color: #E5E7EB; -fx-border-color: #E5E7EB; -fx-font-size: 13px;");
+        table.setStyle("-fx-background-color: white; -fx-border-color: #E2E8F0; -fx-border-radius: 10; -fx-background-radius: 10;");
 
         TableColumn<T, String> col1 = new TableColumn<>(tituloCol1);
         col1.setCellValueFactory(d -> new SimpleStringProperty(valCol1.apply(d.getValue())));

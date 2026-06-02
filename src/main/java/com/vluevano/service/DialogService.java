@@ -36,11 +36,11 @@ public class DialogService {
     public void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje, Stage owner) {
         Stage alertStage = crearStage(owner);
 
-        VBox card = new VBox(20);
-        card.setPadding(new Insets(25));
-        card.setStyle(AppTheme.STYLE_DIALOG_BG + " -fx-background-radius: 12;");
-        card.setMinWidth(350);
-        card.setMaxWidth(350);
+        VBox card = new VBox(25);
+        card.setPadding(new Insets(35));
+        card.setStyle(AppTheme.STYLE_DIALOG_BG);
+        card.setMinWidth(380);
+        card.setMaxWidth(380);
 
         String colorTitulo = tipo == Alert.AlertType.ERROR ? AppTheme.COLOR_ERROR
                 : (tipo == Alert.AlertType.WARNING ? AppTheme.COLOR_WARNING : AppTheme.COLOR_PRIMARY);
@@ -82,11 +82,11 @@ public class DialogService {
     public boolean mostrarConfirmacion(String titulo, String mensaje, Stage owner) {
         Stage alertStage = crearStage(owner);
 
-        VBox card = new VBox(20);
-        card.setPadding(new Insets(25));
-        card.setStyle(AppTheme.STYLE_DIALOG_BG + " -fx-background-radius: 12;");
-        card.setMinWidth(380);
-        card.setMaxWidth(380);
+        VBox card = new VBox(25);
+        card.setPadding(new Insets(35));
+        card.setStyle(AppTheme.STYLE_DIALOG_BG);
+        card.setMinWidth(420);
+        card.setMaxWidth(420);
 
         Label lblTitulo = new Label(titulo);
         lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
@@ -135,7 +135,7 @@ public class DialogService {
         }
 
         StackPane rootOverlay = new StackPane(content);
-        rootOverlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.4);");
+        rootOverlay.setStyle("-fx-background-color: rgba(17, 24, 39, 0.5);");
         rootOverlay.setAlignment(Pos.CENTER);
 
         Scene scene = new Scene(rootOverlay);

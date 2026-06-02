@@ -98,7 +98,7 @@ public class LoginScreen {
         card.setMaxWidth(450);
         card.setAlignment(Pos.CENTER_LEFT);
         card.setPadding(new Insets(50));
-        card.setStyle("-fx-background-color: white;");
+        card.setStyle(AppTheme.STYLE_CARD);
 
         buildBienvenida(card);
         rootLayout.getChildren().addAll(contenedorImagen, card);

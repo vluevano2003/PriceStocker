@@ -9,9 +9,9 @@ public class AppTheme {
     public static final String COLOR_ERROR = "#DC2626";
     public static final String COLOR_WARNING = "#D97706";
 
-    public static final String STYLE_INPUT = "-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-font-size: 14px;";
+    public static final String STYLE_INPUT = "-fx-background-color: white; -fx-border-color: #E2E8F0; -fx-border-width: 1px; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 12; -fx-font-size: 14px; -fx-text-fill: #111827;";
 
-    public static final String STYLE_CARD = "-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 4);";
+    public static final String STYLE_CARD = "-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 20, 0, 0, 8);";
 
-    public static final String STYLE_DIALOG_BG = "-fx-background-color: white; -fx-border-color: #E5E7EB; -fx-border-width: 1; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 4);";
+    public static final String STYLE_DIALOG_BG = "-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 30, 0, 0, 10);";
 }
