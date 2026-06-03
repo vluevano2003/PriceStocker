@@ -39,6 +39,9 @@ public class ProductoView extends BaseDirectorioView<Producto> {
     @Autowired
     private MonedaService monedaService;
 
+    @Autowired
+    private com.vluevano.service.ImpuestoService impuestoService;
+
     private TextField txtNombre, txtFicha, txtAlterno, txtExistencia, txtPrecio, txtStockMinimo;
     private ComboBox<String> cmbMoneda;
     private Label lblConversion, lblTituloPrecio, lblDesgloseIva;
@@ -576,9 +579,9 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         cmbMoneda.setPrefWidth(120);
         cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
 
-        chkAplicaIva = new CheckBox(idioma.get("product.lbl.aplica_iva", "¿Aplica IVA (16%)?"));
-        chkAplicaIva.setSelected(true);
-        chkAplicaIva.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;");
+        chkAplicaIva = new CheckBox(String.format(idioma.get("product.lbl.aplica_iva"), impuestoService.getIvaPorcentaje()));
+        chkAplicaIva.setSelected(false);
+        chkAplicaIva.setStyle("-fx-text-fill: #4B5563; -fx-font-size: 13px;");
 
         lblConversion = new Label("");
         lblConversion.setStyle("-fx-text-fill: #F97316; -fx-font-size: 13px; -fx-font-weight: bold;");
@@ -657,7 +660,7 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         try {
             double val = Double.parseDouble(txtPrecio.getText().trim());
             if (aplica) {
-                double sub = val / 1.16;
+                double sub = val / impuestoService.getFactorIva();
                 double iva = val - sub;
                 lblDesgloseIva.setText(String.format(idioma.get("global.breakdown_iva"), sub, iva, val));
             } else {
@@ -890,7 +893,7 @@ public class ProductoView extends BaseDirectorioView<Producto> {
 
         boolean aplica = p.getAplicaIva() != null && p.getAplicaIva();
         double precioVal = p.getPrecioProducto() != null ? p.getPrecioProducto() : 0.0;
-        double base = aplica ? precioVal / 1.16 : precioVal;
+        double base = aplica ? precioVal / impuestoService.getFactorIva() : precioVal;
         double iva = aplica ? precioVal - base : 0.0;
 
         Label lblBase = new Label(formatearPrecioInteligente(base, p.getMonedaProducto()));

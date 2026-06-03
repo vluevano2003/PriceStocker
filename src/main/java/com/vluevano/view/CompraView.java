@@ -37,7 +37,10 @@ public class CompraView {
     private MenuPrincipalScreen menuPrincipalScreen;
     @Autowired
     private MonedaService monedaService;
+
     @Autowired
+    private com.vluevano.service.ImpuestoService impuestoService;
+
     private GestorIdioma idioma;
 
     private Stage stage;
@@ -528,7 +531,7 @@ public class CompraView {
             double lineTotal = d.getSubtotal();
             total += lineTotal;
             if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
-                double lineSubtotal = lineTotal / 1.16;
+                double lineSubtotal = lineTotal / impuestoService.getFactorIva();
                 subtotal += lineSubtotal;
                 iva += (lineTotal - lineSubtotal);
             } else {

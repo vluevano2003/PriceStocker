@@ -37,6 +37,8 @@ public class VentaView {
     @Autowired
     private MonedaService monedaService;
     @Autowired
+    private com.vluevano.service.ImpuestoService impuestoService;
+    @Autowired
     private GestorIdioma idioma;
 
     private Stage stage;
@@ -462,10 +464,11 @@ public class VentaView {
         for (DetalleVenta d : listaDetalles) {
             double lineTotal = d.getSubtotal();
             total += lineTotal;
-            if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
-                double lineSubtotal = lineTotal / 1.16;
-                subtotal += lineSubtotal;
+            Producto p = d.getProducto();
+            if (p != null && p.getAplicaIva() != null && p.getAplicaIva()) {
+                double lineSubtotal = lineTotal / impuestoService.getFactorIva();
                 iva += (lineTotal - lineSubtotal);
+                subtotal += lineSubtotal;
             } else {
                 subtotal += lineTotal;
             }

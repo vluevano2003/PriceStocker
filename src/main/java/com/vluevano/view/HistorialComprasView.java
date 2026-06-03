@@ -5,6 +5,8 @@ import com.vluevano.model.DetalleCompra;
 import com.vluevano.service.CompraService;
 import com.vluevano.service.MonedaService;
 import com.vluevano.service.PdfService;
+import com.vluevano.service.ImpuestoService;
+import com.vluevano.model.Producto;
 import com.vluevano.util.AppTheme;
 import com.vluevano.util.UIFactory;
 import com.vluevano.view.base.BaseHistorialView;
@@ -29,6 +31,7 @@ public class HistorialComprasView extends BaseHistorialView<Compra> {
     @Autowired private CompraService compraService;
     @Autowired private PdfService pdfService;
     @Autowired private MonedaService monedaService;
+    @Autowired private ImpuestoService impuestoService;
 
     @Override
     protected String getTituloVentana() {
@@ -190,8 +193,9 @@ public class HistorialComprasView extends BaseHistorialView<Compra> {
             for (DetalleCompra d : compra.getDetalles()) {
                 double lineTotal = d.getSubtotal();
                 totalCompra += lineTotal;
-                if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
-                    double lineSubtotal = lineTotal / 1.16;
+                Producto p = d.getProducto();
+                if (p != null && Boolean.TRUE.equals(p.getAplicaIva())) {
+                    double lineSubtotal = lineTotal / impuestoService.getFactorIva();
                     subtotalCompra += lineSubtotal;
                     ivaCompra += (lineTotal - lineSubtotal);
                 } else {

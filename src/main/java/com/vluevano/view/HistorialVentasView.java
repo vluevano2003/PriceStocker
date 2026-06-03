@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.vluevano.service.PdfService;
+import com.vluevano.service.ImpuestoService;
+import com.vluevano.model.Producto;
 
 @Component
 public class HistorialVentasView extends BaseHistorialView<Venta> {
@@ -30,6 +32,7 @@ public class HistorialVentasView extends BaseHistorialView<Venta> {
     @Autowired private VentaService ventaService;
     @Autowired private PdfService pdfService;
     @Autowired private MonedaService monedaService;
+    @Autowired private ImpuestoService impuestoService;
 
     @Override
     protected String getTituloVentana() {
@@ -189,8 +192,9 @@ public class HistorialVentasView extends BaseHistorialView<Venta> {
             for (DetalleVenta d : venta.getDetalles()) {
                 double lineTotal = d.getSubtotal();
                 totalVenta += lineTotal;
-                if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
-                    double lineSubtotal = lineTotal / 1.16;
+                Producto p = d.getProducto();
+                if (p != null && Boolean.TRUE.equals(p.getAplicaIva())) {
+                    double lineSubtotal = lineTotal / impuestoService.getFactorIva();
                     subtotalVenta += lineSubtotal;
                     ivaVenta += (lineTotal - lineSubtotal);
                 } else {
