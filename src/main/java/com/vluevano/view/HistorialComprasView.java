@@ -169,7 +169,7 @@ public class HistorialComprasView extends BaseHistorialView<Compra> {
         TableView<DetalleCompra> tableDetalles = new TableView<>();
         tableDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         
-        TableColumn<DetalleCompra, String> colProd = UIFactory.crearColumna(idioma.get("history.popup.col.product"), d -> d.getProducto().getNombreProducto(), 0);
+        TableColumn<DetalleCompra, String> colProd = UIFactory.crearColumna(idioma.get("history.popup.col.product"), d -> d.getProducto().getNombreProducto() + (Boolean.TRUE.equals(d.getProducto().getAplicaIva()) ? idioma.get("history.lbl.vat_indicator") : ""), 0);
         TableColumn<DetalleCompra, String> colCant = UIFactory.crearColumna(idioma.get("history.popup.col.qty"), d -> String.valueOf(d.getCantidad()), 0);
         colCant.setStyle("-fx-alignment: CENTER;");
 
@@ -181,17 +181,45 @@ public class HistorialComprasView extends BaseHistorialView<Compra> {
 
         tableDetalles.getColumns().addAll(List.of(colProd, colCant, colCosto, colSub));
 
+        double totalCompra = 0.0;
+        double subtotalCompra = 0.0;
+        double ivaCompra = 0.0;
+
         if (compra.getDetalles() != null) {
             tableDetalles.setItems(FXCollections.observableArrayList(compra.getDetalles()));
+            for (DetalleCompra d : compra.getDetalles()) {
+                double lineTotal = d.getSubtotal();
+                totalCompra += lineTotal;
+                if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
+                    double lineSubtotal = lineTotal / 1.16;
+                    subtotalCompra += lineSubtotal;
+                    ivaCompra += (lineTotal - lineSubtotal);
+                } else {
+                    subtotalCompra += lineTotal;
+                }
+            }
         }
         VBox.setVgrow(tableDetalles, Priority.ALWAYS);
+
+        VBox boxTotales = new VBox(5);
+        boxTotales.setAlignment(Pos.CENTER_RIGHT);
+        boxTotales.setPadding(new Insets(10, 0, 10, 0));
+        
+        Label lblSubVal = new Label(String.format(idioma.get("history.lbl.subtotal"), subtotalCompra));
+        Label lblIvaVal = new Label(String.format(idioma.get("history.lbl.iva"), ivaCompra));
+        Label lblTotVal = new Label(String.format(idioma.get("history.lbl.total"), totalCompra));
+        lblTotVal.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #111827;");
+        lblSubVal.setStyle("-fx-text-fill: #6B7280;");
+        lblIvaVal.setStyle("-fx-text-fill: #6B7280;");
+        
+        boxTotales.getChildren().addAll(lblSubVal, lblIvaVal, lblTotVal);
 
         Button btnCerrar = UIFactory.crearBotonSecundario(idioma.get("history.btn.close"));
         btnCerrar.setOnAction(e -> dialog.close());
         HBox footer = new HBox(btnCerrar);
         footer.setAlignment(Pos.CENTER_RIGHT);
 
-        root.getChildren().addAll(lblTitulo, new Separator(), tableDetalles, footer);
+        root.getChildren().addAll(lblTitulo, new Separator(), tableDetalles, boxTotales, footer);
         dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 

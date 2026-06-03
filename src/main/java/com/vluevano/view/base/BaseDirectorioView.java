@@ -22,6 +22,7 @@ public abstract class BaseDirectorioView<T> {
     @Autowired protected DialogService dialogService;
     @Autowired @Lazy protected MenuPrincipalScreen menuPrincipalScreen;
     @Autowired protected GestorIdioma idioma;
+    @Autowired protected com.vluevano.service.UsuarioService usuarioService;
 
     protected Stage stage;
     protected String usuarioActual;
@@ -170,6 +171,16 @@ public abstract class BaseDirectorioView<T> {
 
         footer.getChildren().addAll(btnGuardar, btnLimpiar, lblMensaje);
         card.getChildren().addAll(lblTituloFormulario, scrollPane, footer);
+        
+        if (!usuarioService.tienePermiso(usuarioActual)) {
+            scrollPane.setDisable(true);
+            btnGuardar.setVisible(false);
+            btnGuardar.setManaged(false);
+            btnLimpiar.setVisible(false);
+            btnLimpiar.setManaged(false);
+            lblTituloFormulario.setText(idioma.get("ui.form.readonly", "Vista de Solo Lectura"));
+        }
+        
         return card;
     }
 

@@ -44,6 +44,17 @@ public class ProductoService {
     }
 
     /**
+     * Devuelve una lista con los productos cuya existencia actual sea menor o igual
+     * a su stock mínimo definido, y que se encuentren activos.
+     * @return 
+     */
+    public List<Producto> obtenerProductosBajoStock() {
+        return productoRepository.findAllActivos().stream()
+                .filter(p -> p.getExistenciaProducto() <= (p.getStockMinimo() != null ? p.getStockMinimo() : 0))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Busca productos que coincidan con el filtro proporcionado. El filtro se
      * aplica a campos como nombre, descripción, categoría, proveedor, cliente,
      * fabricante o empresa. Retorna una lista de productos que coincidan con el
@@ -169,8 +180,10 @@ public class ProductoService {
                 productoAGuardar.setFichaProducto(producto.getFichaProducto());
                 productoAGuardar.setAlternoProducto(producto.getAlternoProducto());
                 productoAGuardar.setExistenciaProducto(producto.getExistenciaProducto());
+                productoAGuardar.setStockMinimo(producto.getStockMinimo());
                 productoAGuardar.setPrecioProducto(producto.getPrecioProducto());
                 productoAGuardar.setMonedaProducto(producto.getMonedaProducto());
+                productoAGuardar.setAplicaIva(producto.getAplicaIva());
 
                 if (producto.getCategorias() != null) {
                     List<Categoria> catsVivas = new ArrayList<>();

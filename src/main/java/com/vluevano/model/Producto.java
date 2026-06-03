@@ -37,8 +37,14 @@ public class Producto {
     @Column(name = "monedaproducto", length = 3)
     private String monedaProducto;
 
+    @Column(name = "STOCK_MINIMO")
+    private Integer stockMinimo = 5;
+
     @Column(name = "activo")
     private Boolean activo = true;
+    
+    @Column(name = "aplicaiva")
+    private Boolean aplicaIva = true;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "productocategoria", joinColumns = @JoinColumn(name = "idproducto"), inverseJoinColumns = @JoinColumn(name = "idcategoria"))

@@ -11,6 +11,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -55,6 +56,9 @@ public class VentaView {
     private ComboBox<String> cmbMonedaVenta;
     private Label lblTotalEquivalente;
     private String monedaAnterior;
+
+    private Label lblSubtotalValor;
+    private Label lblImpuestosValor;
 
     /**
      * Muestra la pantalla de venta
@@ -105,6 +109,13 @@ public class VentaView {
         }
 
         stage.setTitle("PriceStocker | " + idioma.get("sale.window.title"));
+
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.F5) {
+                procesarVenta();
+            }
+        });
+
         stage.show();
 
         cargarCatalogos();
@@ -283,7 +294,13 @@ public class VentaView {
         lblTotal = new Label(idioma.get("sale.lbl.total") + " $0.00");
         lblTotal.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY);
 
-        VBox boxTotales = new VBox(0, lblTotal, lblTotalEquivalente);
+        lblSubtotalValor = new Label(idioma.get("sale.lbl.subtotal") + " $0.00");
+        lblSubtotalValor.setStyle("-fx-font-size: 14px; -fx-text-fill: #6B7280;");
+        
+        lblImpuestosValor = new Label(idioma.get("sale.lbl.tax") + " $0.00");
+        lblImpuestosValor.setStyle("-fx-font-size: 14px; -fx-text-fill: #6B7280;");
+
+        VBox boxTotales = new VBox(2, lblSubtotalValor, lblImpuestosValor, lblTotal, lblTotalEquivalente);
         boxTotales.setAlignment(Pos.CENTER_LEFT);
 
         Button btnFinalizar = UIFactory.crearBotonPrimario(idioma.get("sale.btn.register"));
@@ -438,7 +455,24 @@ public class VentaView {
      * opuesta si es necesario
      */
     private void calcularTotalGeneral() {
-        double total = listaDetalles.stream().mapToDouble(DetalleVenta::getSubtotal).sum();
+        double subtotal = 0.0;
+        double iva = 0.0;
+        double total = 0.0;
+        
+        for (DetalleVenta d : listaDetalles) {
+            double lineTotal = d.getSubtotal();
+            total += lineTotal;
+            if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
+                double lineSubtotal = lineTotal / 1.16;
+                subtotal += lineSubtotal;
+                iva += (lineTotal - lineSubtotal);
+            } else {
+                subtotal += lineTotal;
+            }
+        }
+
+        lblSubtotalValor.setText(idioma.get("sale.lbl.subtotal") + String.format(" $%.2f", subtotal));
+        lblImpuestosValor.setText(idioma.get("sale.lbl.tax") + String.format(" $%.2f", iva));
         lblTotal.setText(idioma.get("sale.lbl.total") + String.format(" $%.2f", total));
 
         String monedaSel = cmbMonedaVenta.getValue();

@@ -153,7 +153,10 @@ public class ClienteView extends BaseDirectorioView<Cliente> {
             }
         });
 
-        tablaDatos.getColumns().addAll(java.util.List.of(colId, colNombre, colTel, colCorreo, colDireccion, colAcciones));
+        tablaDatos.getColumns().addAll(java.util.List.of(colId, colNombre, colTel, colCorreo, colDireccion));
+        if (usuarioService.tienePermiso(usuarioActual)) {
+            tablaDatos.getColumns().add(colAcciones);
+        }
     }
 
     /**

@@ -2,6 +2,11 @@ package com.vluevano.view;
 
 import com.vluevano.service.MonedaService;
 import com.vluevano.service.UsuarioService;
+import com.vluevano.service.VentaService;
+import com.vluevano.service.CompraService;
+import com.vluevano.service.ProductoService;
+import com.vluevano.model.Venta;
+import com.vluevano.model.Compra;
 import com.vluevano.util.GestorIdioma;
 import javafx.animation.TranslateTransition;
 import javafx.geometry.Insets;
@@ -15,6 +20,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -25,6 +36,12 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -34,6 +51,18 @@ public class MenuPrincipalScreen {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private VentaService ventaService;
+
+    @Autowired
+    private CompraService compraService;
+
+    @Autowired
+    private ProductoService productoService;
+
+    @Autowired
+    private com.vluevano.service.DialogService dialogService;
 
     @Autowired
     private GestorIdioma idioma;
@@ -95,6 +124,7 @@ public class MenuPrincipalScreen {
     private VBox fabContainer;
     private boolean menuFabAbierto = false;
     private Region overlayOscuro;
+    private boolean alertaStockMostrada = false;
 
     private static final String COLOR_PRIMARY = "#F97316";
     private static final String COLOR_SIDEBAR_BG = "#111827";
@@ -142,6 +172,15 @@ public class MenuPrincipalScreen {
 
         stage.setTitle("PriceStocker | " + idioma.get("menu.window.title"));
         stage.show();
+        
+        javafx.application.Platform.runLater(() -> {
+            if (!alertaStockMostrada && !productoService.obtenerProductosBajoStock().isEmpty()) {
+                alertaStockMostrada = true;
+                dialogService.mostrarAlerta(javafx.scene.control.Alert.AlertType.WARNING, 
+                    idioma.get("dashboard.lbl.low_stock", "Productos con Stock Bajo"), 
+                    "Existen productos con niveles de inventario por debajo del stock mínimo.", stage);
+            }
+        });
     }
 
     /**
@@ -156,7 +195,7 @@ public class MenuPrincipalScreen {
 
         BorderPane contentPane = new BorderPane();
         contentPane.setTop(crearHeader());
-        contentPane.setCenter(crearPantallaBienvenida());
+        contentPane.setCenter(crearDashboard());
         mainLayout.setCenter(contentPane);
 
         overlayOscuro = new Region();
@@ -240,6 +279,9 @@ public class MenuPrincipalScreen {
 
         MenuItem itemConfig = new MenuItem(idioma.get("menu.user.config"));
         itemConfig.setOnAction(e -> configuracionView.show(stage, usuarioActual));
+        if (!usuarioService.tienePermiso(usuarioActual)) {
+            itemConfig.setVisible(false);
+        }
 
         SeparatorMenuItem sep = new SeparatorMenuItem();
 
@@ -290,8 +332,10 @@ public class MenuPrincipalScreen {
 
         // OPERACIONES
         sidebar.getChildren().add(crearTituloSeccion(idioma.get("menu.section.operations")));
+        
+        boolean hayBajoStock = !productoService.obtenerProductosBajoStock().isEmpty();
         sidebar.getChildren()
-                .add(crearBotonMenu(idioma.get("menu.btn.products"), () -> productoView.show(stage, usuarioActual)));
+                .add(crearBotonMenu(idioma.get("menu.btn.products"), () -> productoView.show(stage, usuarioActual), hayBajoStock));
 
         Region spacer1 = new Region();
         spacer1.setPrefHeight(10);
@@ -352,44 +396,115 @@ public class MenuPrincipalScreen {
     }
 
     /**
-     * Crea la pantalla de bienvenida que se muestra al iniciar sesión, con un
-     * mensaje dinámico que incluye el nombre del usuario y un subtítulo motivador.
-     * También se muestra el logo de la aplicación con un estilo moderno
-     * 
-     * @return
+     * Crea el panel de control dinámico (Dashboard) con tarjetas de resumen y gráficos
      */
-    private StackPane crearPantallaBienvenida() {
-        StackPane centro = new StackPane();
+    private ScrollPane crearDashboard() {
+        VBox centro = new VBox(30);
+        centro.setPadding(new Insets(30));
         centro.setStyle("-fx-background-color: " + COLOR_BG_DASHBOARD + ";");
 
-        VBox contenido = new VBox(25);
-        contenido.setAlignment(Pos.CENTER);
-
-        VBox card = new VBox(20);
-        card.setAlignment(Pos.CENTER);
-        card.setMaxSize(500, 300);
-        card.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 4);");
-
-        ImageView imgLogo = new ImageView();
-        try {
-            imgLogo.setImage(new Image(getClass().getResourceAsStream("/images/PriceStockerLogo.png")));
-        } catch (Exception e) {
-        }
-        imgLogo.setFitWidth(200);
-        imgLogo.setPreserveRatio(true);
-        imgLogo.setOpacity(0.8);
-
+        // Header del Dashboard
+        VBox headerDash = new VBox(5);
         Label lblBienvenida = new Label(idioma.get("menu.welcome.title", usuarioActual));
-        lblBienvenida.setStyle(
-                "-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #111827;");
-
-        Label lblSub = new Label(idioma.get("menu.welcome.subtitle"));
+        lblBienvenida.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #111827;");
+        Label lblSub = new Label(idioma.get("menu.welcome.subtitle", "Aquí tienes un resumen de tu negocio."));
         lblSub.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-text-fill: #6B7280;");
+        headerDash.getChildren().addAll(lblBienvenida, lblSub);
 
-        card.getChildren().addAll(imgLogo, lblBienvenida, lblSub);
-        centro.getChildren().add(card);
-        return centro;
+        // Tarjetas de Resumen
+        HBox cardsRow = new HBox(20);
+        cardsRow.getChildren().addAll(
+            crearTarjetaResumen(idioma.get("dashboard.lbl.sales_today"), calcularVentasHoy(), "#10B981"),
+            crearTarjetaResumen(idioma.get("dashboard.lbl.purchases_month"), calcularComprasMes(), "#3B82F6"),
+            crearTarjetaResumen(idioma.get("dashboard.lbl.total_products"), String.valueOf(productoService.consultarProductos().size()), "#8B5CF6")
+        );
+
+        // Gráfico
+        VBox chartContainer = new VBox(15);
+        chartContainer.setPadding(new Insets(20));
+        chartContainer.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 4);");
+        
+        Label lblChart = new Label(idioma.get("dashboard.lbl.activity_7_days"));
+        lblChart.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: #374151;");
+        
+        BarChart<String, Number> barChart = crearGraficoSieteDias();
+        chartContainer.getChildren().addAll(lblChart, barChart);
+
+        centro.getChildren().addAll(headerDash, cardsRow, chartContainer);
+        
+        ScrollPane scroll = new ScrollPane(centro);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: " + COLOR_BG_DASHBOARD + ";");
+        return scroll;
+    }
+
+    private VBox crearTarjetaResumen(String titulo, String valor, String colorHex) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(20));
+        card.setPrefWidth(250);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 4);");
+        
+        Label lblTitulo = new Label(titulo);
+        lblTitulo.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #6B7280;");
+        
+        Label lblValor = new Label(valor);
+        lblValor.setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: " + colorHex + ";");
+        
+        card.getChildren().addAll(lblTitulo, lblValor);
+        return card;
+    }
+
+    private String calcularVentasHoy() {
+        LocalDate hoy = LocalDate.now();
+        List<Venta> ventas = ventaService.obtenerVentasPorRango(hoy, hoy);
+        double total = ventas.stream().mapToDouble(Venta::getTotalVenta).sum();
+        return String.format("$%.2f", total);
+    }
+
+    private String calcularComprasMes() {
+        LocalDate inicioMes = LocalDate.now().withDayOfMonth(1);
+        LocalDate finMes = LocalDate.now();
+        List<Compra> compras = compraService.obtenerComprasPorRango(inicioMes, finMes);
+        double total = compras.stream().mapToDouble(Compra::getTotalCompra).sum();
+        return String.format("$%.2f", total);
+    }
+
+    private BarChart<String, Number> crearGraficoSieteDias() {
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+        barChart.setLegendVisible(true);
+        barChart.setAnimated(false);
+        barChart.setPrefHeight(300);
+
+        XYChart.Series<String, Number> seriesVentas = new XYChart.Series<>();
+        seriesVentas.setName(idioma.get("dashboard.lbl.sales"));
+
+        XYChart.Series<String, Number> seriesCompras = new XYChart.Series<>();
+        seriesCompras.setName(idioma.get("dashboard.lbl.purchases"));
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate hace7 = hoy.minusDays(6);
+
+        List<Venta> ventas = ventaService.obtenerVentasPorRango(hace7, hoy);
+        List<Compra> compras = compraService.obtenerComprasPorRango(hace7, hoy);
+
+        Map<LocalDate, Double> ventasPorDia = ventas.stream()
+            .collect(Collectors.groupingBy(v -> v.getFechaVenta().toLocalDate(), Collectors.summingDouble(Venta::getTotalVenta)));
+        Map<LocalDate, Double> comprasPorDia = compras.stream()
+            .collect(Collectors.groupingBy(c -> c.getFechaCompra().toLocalDate(), Collectors.summingDouble(Compra::getTotalCompra)));
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
+
+        for (int i = 6; i >= 0; i--) {
+            LocalDate d = hoy.minusDays(i);
+            String label = d.format(fmt);
+            seriesVentas.getData().add(new XYChart.Data<>(label, ventasPorDia.getOrDefault(d, 0.0)));
+            seriesCompras.getData().add(new XYChart.Data<>(label, comprasPorDia.getOrDefault(d, 0.0)));
+        }
+
+        barChart.getData().addAll(seriesVentas, seriesCompras);
+        return barChart;
     }
 
     /**
@@ -402,6 +517,10 @@ public class MenuPrincipalScreen {
      * @return
      */
     private Button crearBotonMenu(String texto, Runnable accion) {
+        return crearBotonMenu(texto, accion, false);
+    }
+
+    private Button crearBotonMenu(String texto, Runnable accion, boolean hasAlert) {
         Button btn = new Button(texto);
         btn.setMaxWidth(Double.MAX_VALUE);
         btn.setAlignment(Pos.CENTER_LEFT);
@@ -415,9 +534,20 @@ public class MenuPrincipalScreen {
 
         btn.setStyle(styleBase);
 
+        HBox graphicBox = new HBox(5);
+        graphicBox.setAlignment(Pos.CENTER_LEFT);
+        
         Rectangle indicator = new Rectangle(3, 16, Color.web(COLOR_PRIMARY));
         indicator.setVisible(false);
-        btn.setGraphic(indicator);
+        
+        graphicBox.getChildren().add(indicator);
+        
+        if (hasAlert) {
+            Circle dot = new Circle(4, Color.web("#DC2626"));
+            graphicBox.getChildren().add(dot);
+        }
+
+        btn.setGraphic(graphicBox);
         btn.setGraphicTextGap(10);
 
         btn.setOnMouseEntered(e -> {
@@ -554,6 +684,7 @@ public class MenuPrincipalScreen {
      * salir de su cuenta y volver a la pantalla de inicio de sesión
      */
     private void cerrarSesion() {
+        alertaStockMostrada = false;
         loginScreen.show(stage);
     }
 }
