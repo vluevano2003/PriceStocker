@@ -47,6 +47,20 @@ public class VentaService {
     }
 
     /**
+     * Verifica si el cliente tiene un precio específico para el producto
+     * @param p
+     * @param c
+     * @return
+     */
+    public boolean tienePrecioEspecifico(Producto p, Cliente c) {
+        if (c != null && p != null) {
+            ProductoCliente pc = productoClienteRepository.findPrecioEspecifico(p.getIdProducto(), c.getIdCliente());
+            return pc != null && pc.getCosto() != null;
+        }
+        return false;
+    }
+
+    /**
      * Obtiene la moneda de venta considerando si el cliente tiene una moneda específica para el producto
      * @param p
      * @param c

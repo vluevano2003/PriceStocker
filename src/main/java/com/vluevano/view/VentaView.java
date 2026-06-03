@@ -22,13 +22,21 @@ import java.util.function.UnaryOperator;
 @Component
 public class VentaView {
 
-    @Autowired private VentaService ventaService;
-    @Autowired private ProductoService productoService;
-    @Autowired private ClienteService clienteService;
-    @Autowired private DialogService dialogService;
-    @Autowired @Lazy private MenuPrincipalScreen menuPrincipalScreen;
-    @Autowired private MonedaService monedaService;
-    @Autowired private GestorIdioma idioma; 
+    @Autowired
+    private VentaService ventaService;
+    @Autowired
+    private ProductoService productoService;
+    @Autowired
+    private ClienteService clienteService;
+    @Autowired
+    private DialogService dialogService;
+    @Autowired
+    @Lazy
+    private MenuPrincipalScreen menuPrincipalScreen;
+    @Autowired
+    private MonedaService monedaService;
+    @Autowired
+    private GestorIdioma idioma;
 
     private Stage stage;
     private String usuarioActual;
@@ -40,6 +48,7 @@ public class VentaView {
     private TextField txtCantidad;
     private TextField txtPrecioVenta;
     private Label lblMonedaSugerida;
+    private Label lblOrigenPrecio;
     private Label lblStockActual;
 
     private Label lblTotal;
@@ -49,6 +58,7 @@ public class VentaView {
 
     /**
      * Muestra la pantalla de venta
+     * 
      * @param stage
      * @param usuarioActual
      */
@@ -101,7 +111,9 @@ public class VentaView {
     }
 
     /**
-     * Crea el panel de control para seleccionar cliente, producto, cantidad y precio
+     * Crea el panel de control para seleccionar cliente, producto, cantidad y
+     * precio
+     * 
      * @return
      */
     private VBox crearPanelControl() {
@@ -116,8 +128,15 @@ public class VentaView {
         cmbCliente.setStyle(AppTheme.STYLE_INPUT);
 
         cmbCliente.setConverter(new javafx.util.StringConverter<Cliente>() {
-            @Override public String toString(Cliente c) { return (c != null) ? c.getNombreCliente() : ""; }
-            @Override public Cliente fromString(String string) { return null; }
+            @Override
+            public String toString(Cliente c) {
+                return (c != null) ? c.getNombreCliente() : "";
+            }
+
+            @Override
+            public Cliente fromString(String string) {
+                return null;
+            }
         });
 
         cmbCliente.setOnAction(e -> actualizarInfoProducto());
@@ -127,8 +146,15 @@ public class VentaView {
         cmbProducto.setStyle(AppTheme.STYLE_INPUT);
 
         cmbProducto.setConverter(new javafx.util.StringConverter<Producto>() {
-            @Override public String toString(Producto p) { return (p != null) ? p.getNombreProducto() : ""; }
-            @Override public Producto fromString(String string) { return null; }
+            @Override
+            public String toString(Producto p) {
+                return (p != null) ? p.getNombreProducto() : "";
+            }
+
+            @Override
+            public Producto fromString(String string) {
+                return null;
+            }
         });
 
         cmbProducto.setOnAction(e -> actualizarInfoProducto());
@@ -147,7 +173,12 @@ public class VentaView {
 
         lblMonedaSugerida = new Label("");
         lblMonedaSugerida.setStyle("-fx-text-fill: #F97316; -fx-font-weight: bold; -fx-font-size: 11px;");
-        VBox boxCostoConMoneda = new VBox(2, txtPrecioVenta, lblMonedaSugerida);
+
+        lblOrigenPrecio = new Label("");
+        lblOrigenPrecio.setStyle("-fx-font-size: 11px; -fx-font-style: italic;");
+        lblOrigenPrecio.setWrapText(true);
+
+        VBox boxCostoConMoneda = new VBox(2, txtPrecioVenta, lblMonedaSugerida, lblOrigenPrecio);
 
         lblStockActual = new Label(idioma.get("sale.lbl.stock_empty"));
         lblStockActual.setStyle("-fx-font-size: 12px; -fx-text-fill: #6B7280;");
@@ -163,14 +194,17 @@ public class VentaView {
                 UIFactory.crearTituloSeccion(idioma.get("sale.section.product")),
                 UIFactory.crearGrupoInput(idioma.get("sale.lbl.product"), cmbProducto),
                 lblStockActual,
-                UIFactory.crearGrupoInput(idioma.get("sale.lbl.price"), boxCostoConMoneda),
-                UIFactory.crearGrupoInput(idioma.get("sale.lbl.quantity"), txtCantidad),
+                new HBox(10,
+                        UIFactory.crearGrupoInput(idioma.get("sale.lbl.price"), boxCostoConMoneda),
+                        UIFactory.crearGrupoInput(idioma.get("sale.lbl.quantity"), txtCantidad)),
                 btnAgregar);
         return box;
     }
 
     /**
-     * Crea el panel de detalle de la venta con la tabla de productos agregados, selección de moneda y total
+     * Crea el panel de detalle de la venta con la tabla de productos agregados,
+     * selección de moneda y total
+     * 
      * @return
      */
     private VBox crearPanelDetalle() {
@@ -182,22 +216,24 @@ public class VentaView {
         tablaDetalles.setItems(listaDetalles);
         tablaDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
-        TableColumn<DetalleVenta, String> colProd = UIFactory.crearColumna(idioma.get("sale.col.product"), 
+        TableColumn<DetalleVenta, String> colProd = UIFactory.crearColumna(idioma.get("sale.col.product"),
                 d -> d.getProducto().getNombreProducto(), 0);
 
-        TableColumn<DetalleVenta, String> colCant = UIFactory.crearColumna(idioma.get("sale.col.qty"), 
+        TableColumn<DetalleVenta, String> colCant = UIFactory.crearColumna(idioma.get("sale.col.qty"),
                 d -> String.valueOf(d.getCantidad()), 0);
 
-        TableColumn<DetalleVenta, String> colPrecio = UIFactory.crearColumna(idioma.get("sale.col.price"), 
+        TableColumn<DetalleVenta, String> colPrecio = UIFactory.crearColumna(idioma.get("sale.col.price"),
                 d -> String.format("$%.2f", d.getPrecioUnitario()), 0);
 
-        TableColumn<DetalleVenta, String> colSub = UIFactory.crearColumna(idioma.get("sale.col.subtotal"), 
+        TableColumn<DetalleVenta, String> colSub = UIFactory.crearColumna(idioma.get("sale.col.subtotal"),
                 d -> String.format("$%.2f", d.getSubtotal()), 0);
 
         TableColumn<DetalleVenta, Void> colAccion = new TableColumn<>("");
         colAccion.setCellFactory(param -> new TableCell<>() {
             private final Button btn = UIFactory.crearBotonTablaEliminar(() -> listaDetalles.remove(getIndex()));
-            @Override protected void updateItem(Void item, boolean empty) {
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
                 setGraphic(empty ? null : btn);
             }
@@ -213,10 +249,12 @@ public class VentaView {
 
         cmbMonedaVenta.setOnAction(e -> {
             String nuevaMoneda = cmbMonedaVenta.getValue();
-            if (nuevaMoneda == null || nuevaMoneda.equals(monedaAnterior)) return;
+            if (nuevaMoneda == null || nuevaMoneda.equals(monedaAnterior))
+                return;
 
             double tc = monedaService.getTipoCambioActual();
-            if (tc == 0) tc = 20.0;
+            if (tc == 0)
+                tc = 20.0;
 
             if (!listaDetalles.isEmpty()) {
                 for (DetalleVenta d : listaDetalles) {
@@ -257,12 +295,13 @@ public class VentaView {
         HBox.setHgrow(footer.getChildren().get(3), Priority.ALWAYS);
         footer.setAlignment(Pos.CENTER_LEFT);
 
-        box.getChildren().addAll(new Label(idioma.get("sale.section.detail")), tablaDetalles, new Separator(), footer);
+        box.getChildren().addAll(tablaDetalles, footer);
         return box;
     }
 
     /**
-     * Habilita o deshabilita controles de origen (cliente) según si hay productos en la venta para evitar inconsistencias
+     * Habilita o deshabilita controles de origen (cliente) según si hay productos
+     * en la venta para evitar inconsistencias
      */
     private void actualizarEstadoControlesOrigen() {
         boolean hayItems = !listaDetalles.isEmpty();
@@ -278,7 +317,8 @@ public class VentaView {
     }
 
     /**
-     * Actualiza la información del producto seleccionado, como el stock actual y el precio histórico para ese cliente si existe
+     * Actualiza la información del producto seleccionado, como el stock actual y el
+     * precio histórico para ese cliente si existe
      */
     private void actualizarInfoProducto() {
         Producto p = cmbProducto.getValue();
@@ -290,6 +330,7 @@ public class VentaView {
             Double precioHistorico = ventaService.obtenerPrecioVenta(p, c);
             String monedaHistorica = ventaService.obtenerMonedaVenta(p, c);
             String monedaVentaSeleccionada = cmbMonedaVenta.getValue();
+            boolean tienePrecioEspecifico = ventaService.tienePrecioEspecifico(p, c);
 
             if (precioHistorico > 0) {
                 if (monedaHistorica.equalsIgnoreCase(monedaVentaSeleccionada)) {
@@ -297,7 +338,8 @@ public class VentaView {
                     lblMonedaSugerida.setText(idioma.get("sale.lbl.base", monedaHistorica));
                 } else {
                     double tc = monedaService.getTipoCambioActual();
-                    if (tc == 0) tc = 20.0;
+                    if (tc == 0)
+                        tc = 20.0;
                     double valorConvertido = monedaVentaSeleccionada.equals("MXN")
                             ? (precioHistorico * tc)
                             : (precioHistorico / tc);
@@ -305,32 +347,49 @@ public class VentaView {
                     txtPrecioVenta.setText(String.format("%.2f", valorConvertido).replace(",", "."));
                     lblMonedaSugerida.setText(idioma.get("sale.lbl.autoconv", monedaHistorica));
                 }
+
+                if (tienePrecioEspecifico) {
+                    lblOrigenPrecio.setText("★ "
+                            + idioma.get("sale.lbl.price_origin.specific", "Precio específico de cliente aplicado"));
+                    lblOrigenPrecio.setStyle(
+                            "-fx-font-size: 11px; -fx-font-style: italic; -fx-text-fill: #16A34A; -fx-font-weight: bold;");
+                } else {
+                    lblOrigenPrecio.setText(idioma.get("sale.lbl.price_origin.general", "Precio general del producto"));
+                    lblOrigenPrecio.setStyle("-fx-font-size: 11px; -fx-font-style: italic; -fx-text-fill: #6B7280;");
+                }
             } else {
                 txtPrecioVenta.setText("0.00");
                 lblMonedaSugerida.setText("");
+                lblOrigenPrecio.setText("");
             }
         } else {
             lblStockActual.setText(idioma.get("sale.lbl.stock_empty"));
             txtPrecioVenta.setText("0.00");
             lblMonedaSugerida.setText("");
+            lblOrigenPrecio.setText("");
         }
     }
 
     /**
-     * Agrega el producto seleccionado al detalle de la venta, validando cantidad, precio y stock disponible. Si el producto ya existe en el detalle, actualiza la cantidad y subtotal
+     * Agrega el producto seleccionado al detalle de la venta, validando cantidad,
+     * precio y stock disponible. Si el producto ya existe en el detalle, actualiza
+     * la cantidad y subtotal
      */
     private void agregarProducto() {
         Producto p = cmbProducto.getValue();
-        if (p == null) return;
+        if (p == null)
+            return;
 
         try {
             int cantidadInput = Integer.parseInt(txtCantidad.getText());
             double precioFinal = Double.parseDouble(txtPrecioVenta.getText());
 
-            if (cantidadInput <= 0) throw new NumberFormatException("Cantidad negativa");
+            if (cantidadInput <= 0)
+                throw new NumberFormatException("Cantidad negativa");
 
             if (precioFinal < 0) {
-                dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("sale.msg.neg_price.title"), idioma.get("sale.msg.neg_price.content"), stage);
+                dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("sale.msg.neg_price.title"),
+                        idioma.get("sale.msg.neg_price.content"), stage);
                 return;
             }
 
@@ -343,7 +402,8 @@ public class VentaView {
 
             if (cantidadTotalDeseada > p.getExistenciaProducto()) {
                 int maximoPosible = p.getExistenciaProducto() - cantidadEnCarrito;
-                String msg = (maximoPosible > 0) ? idioma.get("sale.msg.stock.partial", maximoPosible) : idioma.get("sale.msg.stock.none");
+                String msg = (maximoPosible > 0) ? idioma.get("sale.msg.stock.partial", maximoPosible)
+                        : idioma.get("sale.msg.stock.none");
                 dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("sale.msg.stock.title"), msg, stage);
                 return;
             }
@@ -367,12 +427,15 @@ public class VentaView {
             cmbProducto.requestFocus();
 
         } catch (NumberFormatException e) {
-            dialogService.mostrarAlerta(Alert.AlertType.ERROR, idioma.get("sale.msg.numeric.title"), idioma.get("sale.msg.numeric.content"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.ERROR, idioma.get("sale.msg.numeric.title"),
+                    idioma.get("sale.msg.numeric.content"), stage);
         }
     }
 
     /**
-     * Calcula el total general de la venta sumando los subtotales de cada detalle y actualiza la etiqueta del total. También calcula el equivalente en la moneda opuesta si es necesario
+     * Calcula el total general de la venta sumando los subtotales de cada detalle y
+     * actualiza la etiqueta del total. También calcula el equivalente en la moneda
+     * opuesta si es necesario
      */
     private void calcularTotalGeneral() {
         double total = listaDetalles.stream().mapToDouble(DetalleVenta::getSubtotal).sum();
@@ -381,7 +444,8 @@ public class VentaView {
         String monedaSel = cmbMonedaVenta.getValue();
         String monedaPref = monedaService.getMonedaPorDefecto();
         double tc = monedaService.getTipoCambioActual();
-        if (tc == 0) tc = 20.0;
+        if (tc == 0)
+            tc = 20.0;
 
         if (monedaSel != null && monedaSel.equalsIgnoreCase(monedaPref)) {
             lblTotalEquivalente.setText("");
@@ -397,15 +461,20 @@ public class VentaView {
     }
 
     /**
-     * Procesa la venta al hacer clic en el botón de finalizar. Valida que haya productos en el detalle, muestra una confirmación y luego registra la venta usando el servicio. Si la venta se registra exitosamente, limpia el detalle y recarga los catálogos
+     * Procesa la venta al hacer clic en el botón de finalizar. Valida que haya
+     * productos en el detalle, muestra una confirmación y luego registra la venta
+     * usando el servicio. Si la venta se registra exitosamente, limpia el detalle y
+     * recarga los catálogos
      */
     private void procesarVenta() {
         if (listaDetalles.isEmpty()) {
-            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("sale.msg.empty.title"), idioma.get("sale.msg.empty.content"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("sale.msg.empty.title"),
+                    idioma.get("sale.msg.empty.content"), stage);
             return;
         }
 
-        if (dialogService.mostrarConfirmacion(idioma.get("sale.msg.confirm.title"), idioma.get("sale.msg.confirm.content"), stage)) {
+        if (dialogService.mostrarConfirmacion(idioma.get("sale.msg.confirm.title"),
+                idioma.get("sale.msg.confirm.content"), stage)) {
             Venta v = new Venta();
             v.setCliente(cmbCliente.getValue());
             v.setTotalVenta(listaDetalles.stream().mapToDouble(DetalleVenta::getSubtotal).sum());
@@ -415,8 +484,10 @@ public class VentaView {
 
             String resultado = ventaService.registrarVenta(v, new ArrayList<>(listaDetalles), usuarioActual);
 
-            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, idioma.get("sale.msg.result.title"), resultado, stage);
-            if (resultado.contains("exitosamente") || resultado.contains("guardad") || resultado.contains("successfully") || resultado.contains("saved")) {
+            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, idioma.get("sale.msg.result.title"), resultado,
+                    stage);
+            if (resultado.contains("exitosamente") || resultado.contains("guardad")
+                    || resultado.contains("successfully") || resultado.contains("saved")) {
                 listaDetalles.clear();
                 cargarCatalogos();
                 txtPrecioVenta.setText("0.00");
