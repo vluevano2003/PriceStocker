@@ -81,14 +81,11 @@ public class LoginScreen {
         StackPane contenedorImagen = new StackPane();
         HBox.setHgrow(contenedorImagen, Priority.ALWAYS);
         try {
-            Image bgImage = new Image(getClass().getResource("/images/bodega.jpg").toExternalForm());
+            Image bgImage = new Image(getClass().getResource("/images/bodega.png").toExternalForm());
             contenedorImagen.setBackground(
                     new Background(new BackgroundImage(bgImage, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
                             BackgroundPosition.CENTER, new BackgroundSize(100, 100, true, true, false, true))));
-            Region overlay = new Region();
-            overlay.setStyle(
-                    "-fx-background-color: linear-gradient(to bottom right, rgba(0,0,0,0.8), rgba(0,0,0,0.4));");
-            contenedorImagen.getChildren().add(overlay);
+            // Removed the dark overlay to keep the image bright and natural
         } catch (Exception e) {
             contenedorImagen.setStyle("-fx-background-color: #111827;");
         }
