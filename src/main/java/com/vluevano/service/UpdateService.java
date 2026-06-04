@@ -34,13 +34,14 @@ public class UpdateService {
 
     private static final String GITHUB_USER = "vluevano2003";
     private static final String GITHUB_REPO = "PriceStocker";
-    private static final String VERSION_ACTUAL = "v1.4.1";
+    private static final String VERSION_ACTUAL = "v1.5.1";
 
     @Autowired
     private GestorIdioma idioma;
 
     /**
-     * Busca en GitHub la última versión disponible y si es mayor que la actual, muestra un diálogo al usuario para actualizar
+     * Busca en GitHub la última versión disponible y si es mayor que la actual,
+     * muestra un diálogo al usuario para actualizar
      */
     public void buscarYActualizar() {
         new Thread(() -> {
@@ -84,7 +85,9 @@ public class UpdateService {
     }
 
     /**
-     * Muestra un diálogo informando al usuario que hay una nueva versión disponible y preguntando si desea actualizar ahora o más tarde
+     * Muestra un diálogo informando al usuario que hay una nueva versión disponible
+     * y preguntando si desea actualizar ahora o más tarde
+     * 
      * @param versionRemota
      * @param downloadUrl
      */
@@ -101,7 +104,8 @@ public class UpdateService {
         root.setMaxHeight(250);
 
         Label lblTitulo = UIFactory.crearTituloSeccion(idioma.get("update.title.available"));
-        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+        lblTitulo
+                .setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
 
         Label lblMensaje = new Label(idioma.get("update.msg.available", versionRemota));
         lblMensaje.setStyle("-fx-text-fill: " + AppTheme.COLOR_TEXT_MAIN + "; -fx-font-size: 14px;");
@@ -129,7 +133,9 @@ public class UpdateService {
     }
 
     /**
-     * Muestra un diálogo con un indicador de progreso mientras se descarga la nueva versión, luego ejecuta el instalador y reinicia la aplicación
+     * Muestra un diálogo con un indicador de progreso mientras se descarga la nueva
+     * versión, luego ejecuta el instalador y reinicia la aplicación
+     * 
      * @param downloadUrl
      */
     private void mostrarDialogoDescargaYActualizar(String downloadUrl) {
@@ -145,7 +151,8 @@ public class UpdateService {
         root.setMaxHeight(200);
 
         Label lblTitulo = UIFactory.crearTituloSeccion(idioma.get("update.title.downloading"));
-        lblTitulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
+        lblTitulo
+                .setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY + ";");
 
         Label lblMensaje = new Label(idioma.get("update.msg.downloading"));
         lblMensaje.setStyle("-fx-text-fill: " + AppTheme.COLOR_TEXT_MAIN + "; -fx-font-size: 13px;");
@@ -172,7 +179,8 @@ public class UpdateService {
     }
 
     /**
-     * Muestra un diálogo de error si la descarga o instalación falla, informando al usuario que algo salió mal y que intente actualizar manualmente desde GitHub
+     * Muestra un diálogo de error si la descarga o instalación falla, informando al
+     * usuario que algo salió mal y que intente actualizar manualmente desde GitHub
      */
     private void mostrarDialogoError() {
         Stage stage = new Stage();
@@ -202,7 +210,9 @@ public class UpdateService {
     }
 
     /**
-     * Crea una escena con un fondo oscuro semitransparente para resaltar el contenido del diálogo
+     * Crea una escena con un fondo oscuro semitransparente para resaltar el
+     * contenido del diálogo
+     * 
      * @param cajitaBlanca
      * @param stage
      * @return
@@ -226,7 +236,10 @@ public class UpdateService {
     }
 
     /**
-     * Descarga el instalador de la nueva versión, lo ejecuta en modo silencioso y luego reinicia la aplicación. Si algo falla, lanza una excepción para mostrar el diálogo de error
+     * Descarga el instalador de la nueva versión, lo ejecuta en modo silencioso y
+     * luego reinicia la aplicación. Si algo falla, lanza una excepción para mostrar
+     * el diálogo de error
+     * 
      * @param urlDescarga
      * @throws IOException
      * @throws InterruptedException
@@ -251,7 +264,8 @@ public class UpdateService {
 
             String script = "@echo off\r\n"
                     + "timeout /t 2 /nobreak > NUL\r\n"
-                    + "start /wait \"\" \"" + updateFile.toAbsolutePath().toString() + "\" /SILENT /SUPPRESSMSGBOXES\r\n"
+                    + "start /wait \"\" \"" + updateFile.toAbsolutePath().toString()
+                    + "\" /SILENT /SUPPRESSMSGBOXES\r\n"
                     + "start \"\" \"" + appPath + "\"\r\n"
                     + "del \"%~f0\"\r\n";
 
@@ -260,7 +274,7 @@ public class UpdateService {
             }
 
             Runtime.getRuntime().exec("cmd /c start /min \"\" \"" + batFile.getAbsolutePath() + "\"");
-            
+
             System.exit(0);
         } else {
             throw new IOException("Código HTTP: " + response.statusCode());
@@ -268,7 +282,9 @@ public class UpdateService {
     }
 
     /**
-     * Compara dos versiones en formato "vX.Y.Z" y determina si la versión remota es mayor que la local. Si el formato no es correcto, devuelve false
+     * Compara dos versiones en formato "vX.Y.Z" y determina si la versión remota es
+     * mayor que la local. Si el formato no es correcto, devuelve false
+     * 
      * @param remota
      * @param local
      * @return
@@ -283,8 +299,10 @@ public class UpdateService {
                 int numRemoto = i < v1.length ? Integer.parseInt(v1[i]) : 0;
                 int numLocal = i < v2.length ? Integer.parseInt(v2[i]) : 0;
 
-                if (numRemoto > numLocal) return true;
-                if (numRemoto < numLocal) return false;
+                if (numRemoto > numLocal)
+                    return true;
+                if (numRemoto < numLocal)
+                    return false;
             }
         } catch (Exception e) {
             System.err.println("Error al comparar versiones: " + e.getMessage());
@@ -293,7 +311,10 @@ public class UpdateService {
     }
 
     /**
-     * Extrae el valor de una clave específica de un JSON simple sin usar librerías externas. Si la clave no existe o el formato es incorrecto, devuelve una cadena vacía
+     * Extrae el valor de una clave específica de un JSON simple sin usar librerías
+     * externas. Si la clave no existe o el formato es incorrecto, devuelve una
+     * cadena vacía
+     * 
      * @param json
      * @param key
      * @return
@@ -301,11 +322,13 @@ public class UpdateService {
     private String extraerValorJson(String json, String key) {
         String search = "\"" + key + "\"";
         int keyIndex = json.indexOf(search);
-        if (keyIndex == -1) return "";
+        if (keyIndex == -1)
+            return "";
         int colonIndex = json.indexOf(":", keyIndex);
         int startQuote = json.indexOf("\"", colonIndex) + 1;
         int endQuote = json.indexOf("\"", startQuote);
-        if (startQuote == 0 || endQuote == -1) return "";
+        if (startQuote == 0 || endQuote == -1)
+            return "";
         return json.substring(startQuote, endQuote);
     }
 }
