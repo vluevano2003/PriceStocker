@@ -155,7 +155,10 @@ public class FabricanteView extends BaseDirectorioView<Fabricante> {
             }
         });
 
-        tablaDatos.getColumns().addAll(List.of(colId, colNombre, colTel, colCorreo, colDireccion, colAcciones));
+        tablaDatos.getColumns().addAll(List.of(colId, colNombre, colTel, colCorreo, colDireccion));
+        if (usuarioService.tienePermiso(usuarioActual)) {
+            tablaDatos.getColumns().add(colAcciones);
+        }
     }
 
     /**

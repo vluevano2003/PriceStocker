@@ -14,12 +14,13 @@
 El sistema está diseñado para gestionar el ciclo completo de productos y relaciones comerciales:
 
 * **Internacionalización (i18n):** Soporte multiidioma dinámico (Español e Inglés) integrado de forma nativa en toda la interfaz gráfica, validaciones de negocio, ventanas modales y reportes generados.
-* **Control de Acceso:** Sistema de Login seguro con gestión de usuarios y permisos.
+* **Control de Acceso Avanzado:** Sistema de Login seguro con gestión de usuarios y roles. Restricción dinámica de vistas y acciones según los permisos (Ej. protección de edición y borrado de catálogo para Cajeros).
+* **Alertas de Inventario:** Notificaciones emergentes automáticas y marcadores visuales discretos para identificar de inmediato productos que han caído por debajo de su stock mínimo.
 * **Cloud Backup & Sincronización:** Respaldo automatizado de la base de datos en la nube. Incluye creación de cuentas, subida manual, y **Auto-Respaldo silencioso** en segundo plano al cerrar la aplicación.
 * **Restauración Inteligente:** Proceso seguro de restauración que descarga, libera conexiones bloqueadas en caliente, y reemplaza la base de datos local automáticamente.
 * **Gestión de Movimientos:** Registro completo de **Compras y Ventas** que actualizan automáticamente el **Stock** de los productos en tiempo real.
 * **Reportes:** Generación de reportes detallados de compras y ventas en formato PDF.
-* **Gestión de Productos:** Catálogo detallado con soporte para categorización.
+* **Gestión de Productos:** Catálogo detallado con soporte para categorización y configuración flexible de impuestos (IVA).
 * **Precios Dinámicos:** Gestión avanzada de costos y precios por tipo de relación (Cliente, Proveedor, Fabricante, Empresa) con soporte para múltiples monedas (MXN/USD).
 * **Gestión de Terceros:** Módulos completos para administrar:
     * Clientes.

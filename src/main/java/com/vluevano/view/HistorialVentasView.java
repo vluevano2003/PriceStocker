@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.vluevano.service.PdfService;
+import com.vluevano.service.ImpuestoService;
+import com.vluevano.model.Producto;
 
 @Component
 public class HistorialVentasView extends BaseHistorialView<Venta> {
@@ -30,6 +32,7 @@ public class HistorialVentasView extends BaseHistorialView<Venta> {
     @Autowired private VentaService ventaService;
     @Autowired private PdfService pdfService;
     @Autowired private MonedaService monedaService;
+    @Autowired private ImpuestoService impuestoService;
 
     @Override
     protected String getTituloVentana() {
@@ -167,7 +170,7 @@ public class HistorialVentasView extends BaseHistorialView<Venta> {
         TableView<DetalleVenta> tableDetalles = new TableView<>();
         tableDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         
-        TableColumn<DetalleVenta, String> colProd = UIFactory.crearColumna(idioma.get("history.popup.col.product"), d -> d.getProducto().getNombreProducto(), 0);
+        TableColumn<DetalleVenta, String> colProd = UIFactory.crearColumna(idioma.get("history.popup.col.product"), d -> d.getProducto().getNombreProducto() + (Boolean.TRUE.equals(d.getProducto().getAplicaIva()) ? idioma.get("history.lbl.vat_indicator") : ""), 0);
         
         TableColumn<DetalleVenta, String> colCant = UIFactory.crearColumna(idioma.get("history.popup.col.qty"), d -> String.valueOf(d.getCantidad()), 0);
         colCant.setStyle("-fx-alignment: CENTER;");
@@ -180,17 +183,46 @@ public class HistorialVentasView extends BaseHistorialView<Venta> {
 
         tableDetalles.getColumns().addAll(List.of(colProd, colCant, colPrecio, colSub));
 
+        double totalVenta = 0.0;
+        double subtotalVenta = 0.0;
+        double ivaVenta = 0.0;
+
         if (venta.getDetalles() != null) {
             tableDetalles.setItems(FXCollections.observableArrayList(venta.getDetalles()));
+            for (DetalleVenta d : venta.getDetalles()) {
+                double lineTotal = d.getSubtotal();
+                totalVenta += lineTotal;
+                Producto p = d.getProducto();
+                if (p != null && Boolean.TRUE.equals(p.getAplicaIva())) {
+                    double lineSubtotal = lineTotal / impuestoService.getFactorIva();
+                    subtotalVenta += lineSubtotal;
+                    ivaVenta += (lineTotal - lineSubtotal);
+                } else {
+                    subtotalVenta += lineTotal;
+                }
+            }
         }
         VBox.setVgrow(tableDetalles, Priority.ALWAYS);
+
+        VBox boxTotales = new VBox(5);
+        boxTotales.setAlignment(Pos.CENTER_RIGHT);
+        boxTotales.setPadding(new Insets(10, 0, 10, 0));
+        
+        Label lblSubVal = new Label(String.format(idioma.get("history.lbl.subtotal"), subtotalVenta));
+        Label lblIvaVal = new Label(String.format(idioma.get("history.lbl.iva"), ivaVenta));
+        Label lblTotVal = new Label(String.format(idioma.get("history.lbl.total"), totalVenta));
+        lblTotVal.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #111827;");
+        lblSubVal.setStyle("-fx-text-fill: #6B7280;");
+        lblIvaVal.setStyle("-fx-text-fill: #6B7280;");
+        
+        boxTotales.getChildren().addAll(lblSubVal, lblIvaVal, lblTotVal);
 
         Button btnCerrar = UIFactory.crearBotonSecundario(idioma.get("history.btn.close"));
         btnCerrar.setOnAction(e -> dialog.close());
         HBox footer = new HBox(btnCerrar);
         footer.setAlignment(Pos.CENTER_RIGHT);
 
-        root.getChildren().addAll(lblTitulo, new Separator(), tableDetalles, footer);
+        root.getChildren().addAll(lblTitulo, new Separator(), tableDetalles, boxTotales, footer);
         dialogService.mostrarDialogoModal(dialog, root, stage);
     }
 

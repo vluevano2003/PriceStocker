@@ -22,6 +22,7 @@ public abstract class BaseDirectorioView<T> {
     @Autowired protected DialogService dialogService;
     @Autowired @Lazy protected MenuPrincipalScreen menuPrincipalScreen;
     @Autowired protected GestorIdioma idioma;
+    @Autowired protected com.vluevano.service.UsuarioService usuarioService;
 
     protected Stage stage;
     protected String usuarioActual;
@@ -51,13 +52,7 @@ public abstract class BaseDirectorioView<T> {
 
     private static final String MODERN_SCROLL_CSS = "data:text/css," +
         ".scroll-pane { -fx-background-color: transparent; -fx-background: transparent; }" +
-        ".scroll-pane > .viewport { -fx-background-color: transparent; }" +
-        ".scroll-bar:vertical { -fx-min-height: 14px; -fx-pref-height: 14px; -fx-max-height: 14px; -fx-background-color: #F3F4F6; -fx-background-radius: 7px; }" +
-        ".scroll-bar:vertical .track { -fx-background-color: transparent; -fx-border-color: transparent; }" +
-        ".scroll-bar:vertical .thumb { -fx-background-color: #D9DCE2; -fx-background-radius: 7px; -fx-background-insets: 2px; }" +
-        ".scroll-bar:vertical:hover .thumb { -fx-background-color: #BEC4CE; }" + 
-        ".scroll-bar:vertical .increment-button, .scroll-bar:vertical .decrement-button { -fx-padding: 0; -fx-pref-width: 0; }" +
-        ".scroll-bar:vertical .increment-arrow, .scroll-bar:vertical .decrement-arrow { -fx-shape: null; -fx-padding: 0; }";
+        ".scroll-pane > .viewport { -fx-background-color: transparent; }";
 
     /**
      * Muestra la vista en el escenario dado, configurando la estructura común y delegando a los métodos abstractos para la lógica específica de cada directorio
@@ -176,6 +171,16 @@ public abstract class BaseDirectorioView<T> {
 
         footer.getChildren().addAll(btnGuardar, btnLimpiar, lblMensaje);
         card.getChildren().addAll(lblTituloFormulario, scrollPane, footer);
+        
+        if (!usuarioService.tienePermiso(usuarioActual)) {
+            scrollPane.setDisable(true);
+            btnGuardar.setVisible(false);
+            btnGuardar.setManaged(false);
+            btnLimpiar.setVisible(false);
+            btnLimpiar.setManaged(false);
+            lblTituloFormulario.setText(idioma.get("ui.form.readonly", "Vista de Solo Lectura"));
+        }
+        
         return card;
     }
 

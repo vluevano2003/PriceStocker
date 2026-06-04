@@ -258,7 +258,10 @@ public class PrestadorServicioView extends BaseDirectorioView<PrestadorServicio>
             }
         });
 
-        tablaDatos.getColumns().addAll(List.of(colId, colNombre, colTel, colUbicacion, colServicios, colAcciones));
+        tablaDatos.getColumns().addAll(List.of(colId, colNombre, colTel, colUbicacion, colServicios));
+        if (usuarioService.tienePermiso(usuarioActual)) {
+            tablaDatos.getColumns().add(colAcciones);
+        }
     }
 
     /**

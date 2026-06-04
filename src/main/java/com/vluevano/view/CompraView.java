@@ -11,6 +11,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -21,14 +22,26 @@ import java.util.ArrayList;
 @Component
 public class CompraView {
 
-    @Autowired private CompraService compraService;
-    @Autowired private ProductoService productoService;
-    @Autowired private ProveedorService proveedorService;
-    @Autowired private FabricanteService fabricanteService;
-    @Autowired private DialogService dialogService;
-    @Autowired @Lazy private MenuPrincipalScreen menuPrincipalScreen;
-    @Autowired private MonedaService monedaService;
-    @Autowired private GestorIdioma idioma;
+    @Autowired
+    private CompraService compraService;
+    @Autowired
+    private ProductoService productoService;
+    @Autowired
+    private ProveedorService proveedorService;
+    @Autowired
+    private FabricanteService fabricanteService;
+    @Autowired
+    private DialogService dialogService;
+    @Autowired
+    @Lazy
+    private MenuPrincipalScreen menuPrincipalScreen;
+    @Autowired
+    private MonedaService monedaService;
+
+    @Autowired
+    private com.vluevano.service.ImpuestoService impuestoService;
+
+    private GestorIdioma idioma;
 
     private Stage stage;
     private String usuarioActual;
@@ -45,6 +58,7 @@ public class CompraView {
     private ComboBox<Producto> cmbProducto;
     private TextField txtCostou;
     private Label lblMonedaSugerida;
+    private Label lblOrigenCosto;
     private TextField txtCantidad;
 
     private Label lblTotal;
@@ -53,8 +67,12 @@ public class CompraView {
     private Label lblTotalEquivalente;
     private String monedaAnterior;
 
+    private Label lblSubtotalValor;
+    private Label lblImpuestosValor;
+
     /**
-     * Muestra la pantalla de registro de compras, permitiendo al usuario seleccionar el origen (proveedor o fabricante)
+     * Muestra la pantalla de registro de compras, permitiendo al usuario
+     * seleccionar el origen (proveedor o fabricante)
      */
     public void show(Stage stage, String usuarioActual) {
         this.stage = stage;
@@ -70,7 +88,7 @@ public class CompraView {
 
         BorderPane root = new BorderPane();
         root.setTop(UIFactory.crearHeader(
-                idioma.get("purchase.header.title"), 
+                idioma.get("purchase.header.title"),
                 idioma.get("purchase.header.subtitle"),
                 () -> menuPrincipalScreen.show(stage, this.usuarioActual)));
 
@@ -78,9 +96,9 @@ public class CompraView {
         contenido.setPadding(new Insets(20));
         contenido.setStyle("-fx-background-color: " + AppTheme.COLOR_BG_LIGHT + ";");
 
-        VBox panelDerecho = crearPanelDetalle(); 
+        VBox panelDerecho = crearPanelDetalle();
         VBox panelIzquierdo = crearPanelControl();
-        
+
         HBox.setHgrow(panelDerecho, Priority.ALWAYS);
 
         contenido.getChildren().addAll(panelIzquierdo, panelDerecho);
@@ -100,6 +118,13 @@ public class CompraView {
         }
 
         stage.setTitle("PriceStocker | " + idioma.get("purchase.window.title"));
+
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.F5) {
+                procesarCompra();
+            }
+        });
+
         stage.show();
 
         cargarCatalogos();
@@ -107,7 +132,9 @@ public class CompraView {
     }
 
     /**
-     * Crea el panel de control para seleccionar el origen de la compra (proveedor o fabricante), elegir el producto, costo y cantidad
+     * Crea el panel de control para seleccionar el origen de la compra (proveedor o
+     * fabricante), elegir el producto, costo y cantidad
+     * 
      * @return
      */
     private VBox crearPanelControl() {
@@ -131,8 +158,15 @@ public class CompraView {
         cmbProveedor.setMaxWidth(Double.MAX_VALUE);
         cmbProveedor.setStyle(AppTheme.STYLE_INPUT);
         cmbProveedor.setConverter(new javafx.util.StringConverter<Proveedor>() {
-            @Override public String toString(Proveedor p) { return (p != null) ? p.getNombreProv() : ""; }
-            @Override public Proveedor fromString(String string) { return null; }
+            @Override
+            public String toString(Proveedor p) {
+                return (p != null) ? p.getNombreProv() : "";
+            }
+
+            @Override
+            public Proveedor fromString(String string) {
+                return null;
+            }
         });
 
         cmbFabricante = new ComboBox<>();
@@ -141,8 +175,15 @@ public class CompraView {
         cmbFabricante.setVisible(false);
         cmbFabricante.setManaged(false);
         cmbFabricante.setConverter(new javafx.util.StringConverter<Fabricante>() {
-            @Override public String toString(Fabricante f) { return (f != null) ? f.getNombreFabricante() : ""; }
-            @Override public Fabricante fromString(String string) { return null; }
+            @Override
+            public String toString(Fabricante f) {
+                return (f != null) ? f.getNombreFabricante() : "";
+            }
+
+            @Override
+            public Fabricante fromString(String string) {
+                return null;
+            }
         });
 
         containerSelectorOrigen = new VBox(10, cmbProveedor, cmbFabricante);
@@ -151,16 +192,28 @@ public class CompraView {
         cmbProducto.setMaxWidth(Double.MAX_VALUE);
         cmbProducto.setStyle(AppTheme.STYLE_INPUT);
         cmbProducto.setConverter(new javafx.util.StringConverter<Producto>() {
-            @Override public String toString(Producto p) { return (p != null) ? p.getNombreProducto() : ""; }
-            @Override public Producto fromString(String string) { return null; }
+            @Override
+            public String toString(Producto p) {
+                return (p != null) ? p.getNombreProducto() : "";
+            }
+
+            @Override
+            public Producto fromString(String string) {
+                return null;
+            }
         });
 
         txtCostou = UIFactory.crearInput("0.00");
         txtCantidad = UIFactory.crearInput("1");
-        
+
         lblMonedaSugerida = new Label("");
         lblMonedaSugerida.setStyle("-fx-text-fill: #F97316; -fx-font-weight: bold; -fx-font-size: 11px;");
-        VBox boxCostoConMoneda = new VBox(2, txtCostou, lblMonedaSugerida);
+
+        lblOrigenCosto = new Label("");
+        lblOrigenCosto.setStyle("-fx-font-size: 11px; -fx-font-style: italic;");
+        lblOrigenCosto.setWrapText(true);
+
+        VBox boxCostoConMoneda = new VBox(2, txtCostou, lblMonedaSugerida, lblOrigenCosto);
 
         Button btnAgregar = UIFactory.crearBotonPrimario(idioma.get("purchase.btn.add"));
         btnAgregar.setMaxWidth(Double.MAX_VALUE);
@@ -174,14 +227,17 @@ public class CompraView {
                 UIFactory.crearTituloSeccion(idioma.get("purchase.section.detail")),
                 UIFactory.crearGrupoInput(idioma.get("purchase.lbl.product"), cmbProducto),
                 new HBox(10,
-                        UIFactory.crearGrupoInput(idioma.get("purchase.lbl.cost"), boxCostoConMoneda), 
+                        UIFactory.crearGrupoInput(idioma.get("purchase.lbl.cost"), boxCostoConMoneda),
                         UIFactory.crearGrupoInput(idioma.get("purchase.lbl.quantity"), txtCantidad)),
                 btnAgregar);
         return box;
     }
 
     /**
-     * Crea el panel de detalle donde se muestran los productos agregados a la compra, con su cantidad, costo unitario y subtotal, además del total general y la opción para registrar la compra
+     * Crea el panel de detalle donde se muestran los productos agregados a la
+     * compra, con su cantidad, costo unitario y subtotal, además del total general
+     * y la opción para registrar la compra
+     * 
      * @return
      */
     private VBox crearPanelDetalle() {
@@ -193,22 +249,24 @@ public class CompraView {
         tablaDetalles.setItems(listaDetalles);
         tablaDetalles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
-        TableColumn<DetalleCompra, String> colProd = UIFactory.crearColumna(idioma.get("purchase.col.product"), 
+        TableColumn<DetalleCompra, String> colProd = UIFactory.crearColumna(idioma.get("purchase.col.product"),
                 d -> d.getProducto().getNombreProducto(), 0);
-                
-        TableColumn<DetalleCompra, String> colCant = UIFactory.crearColumna(idioma.get("purchase.col.qty"), 
+
+        TableColumn<DetalleCompra, String> colCant = UIFactory.crearColumna(idioma.get("purchase.col.qty"),
                 d -> String.valueOf(d.getCantidad()), 0);
 
-        TableColumn<DetalleCompra, String> colCosto = UIFactory.crearColumna(idioma.get("purchase.col.cost"), 
+        TableColumn<DetalleCompra, String> colCosto = UIFactory.crearColumna(idioma.get("purchase.col.cost"),
                 d -> String.format("$%.2f", d.getCostoUnitario()), 0);
 
-        TableColumn<DetalleCompra, String> colSub = UIFactory.crearColumna(idioma.get("purchase.col.subtotal"), 
+        TableColumn<DetalleCompra, String> colSub = UIFactory.crearColumna(idioma.get("purchase.col.subtotal"),
                 d -> String.format("$%.2f", d.getSubtotal()), 0);
 
         TableColumn<DetalleCompra, Void> colAccion = new TableColumn<>("");
         colAccion.setCellFactory(param -> new TableCell<>() {
             private final Button btn = UIFactory.crearBotonTablaEliminar(() -> listaDetalles.remove(getIndex()));
-            @Override protected void updateItem(Void item, boolean empty) {
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
                 setGraphic(empty ? null : btn);
             }
@@ -224,21 +282,23 @@ public class CompraView {
 
         cmbMonedaCompra.setOnAction(e -> {
             String nuevaMoneda = cmbMonedaCompra.getValue();
-            if (nuevaMoneda == null || nuevaMoneda.equals(monedaAnterior)) return;
+            if (nuevaMoneda == null || nuevaMoneda.equals(monedaAnterior))
+                return;
 
             double tc = monedaService.getTipoCambioActual();
-            if (tc == 0) tc = 20.0;
+            if (tc == 0)
+                tc = 20.0;
 
             if (!listaDetalles.isEmpty()) {
                 for (DetalleCompra d : listaDetalles) {
                     double costo = d.getCostoUnitario();
-                    
+
                     if (monedaAnterior.equals("MXN") && nuevaMoneda.equals("USD")) {
                         costo = costo / tc;
                     } else if (monedaAnterior.equals("USD") && nuevaMoneda.equals("MXN")) {
                         costo = costo * tc;
                     }
-                    
+
                     d.setCostoUnitario(costo);
                     d.setSubtotal(d.getCantidad() * costo);
                 }
@@ -248,7 +308,7 @@ public class CompraView {
             monedaAnterior = nuevaMoneda;
             calcularTotalGeneral();
             actualizarCostoSugerido();
-        }); 
+        });
 
         lblTotalEquivalente = new Label("");
         lblTotalEquivalente.setStyle("-fx-font-size: 14px; -fx-text-fill: #F97316; -fx-font-weight: bold;");
@@ -256,7 +316,13 @@ public class CompraView {
         lblTotal = new Label(idioma.get("purchase.lbl.total") + " $0.00");
         lblTotal.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: " + AppTheme.COLOR_PRIMARY);
 
-        VBox boxTotales = new VBox(0, lblTotal, lblTotalEquivalente);
+        lblSubtotalValor = new Label(idioma.get("sale.lbl.subtotal") + " $0.00");
+        lblSubtotalValor.setStyle("-fx-font-size: 14px; -fx-text-fill: #6B7280;");
+        
+        lblImpuestosValor = new Label(idioma.get("sale.lbl.tax") + " $0.00");
+        lblImpuestosValor.setStyle("-fx-font-size: 14px; -fx-text-fill: #6B7280;");
+
+        VBox boxTotales = new VBox(2, lblSubtotalValor, lblImpuestosValor, lblTotal, lblTotalEquivalente);
         boxTotales.setAlignment(Pos.CENTER_LEFT);
 
         Button btnGuardar = UIFactory.crearBotonPrimario(idioma.get("purchase.btn.register"));
@@ -273,7 +339,9 @@ public class CompraView {
     }
 
     /**
-     * Configura los listeners para los controles de selección de origen, producto y moneda, de manera que se actualice el costo sugerido y se habiliten/deshabiliten controles según corresponda
+     * Configura los listeners para los controles de selección de origen, producto y
+     * moneda, de manera que se actualice el costo sugerido y se
+     * habiliten/deshabiliten controles según corresponda
      */
     private void configurarListeners() {
         rbProveedor.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -304,7 +372,9 @@ public class CompraView {
     }
 
     /**
-     * Habilita o deshabilita los controles de selección de origen (proveedor/fabricante) dependiendo de si hay productos ya agregados a la compra, para evitar inconsistencias en el origen de los productos
+     * Habilita o deshabilita los controles de selección de origen
+     * (proveedor/fabricante) dependiendo de si hay productos ya agregados a la
+     * compra, para evitar inconsistencias en el origen de los productos
      */
     private void actualizarEstadoControlesOrigen() {
         boolean hayItems = !listaDetalles.isEmpty();
@@ -315,12 +385,15 @@ public class CompraView {
     }
 
     /**
-     * Actualiza el costo sugerido en base al producto seleccionado y su historial de compras con el proveedor o fabricante seleccionado, realizando la conversión de moneda si es necesario
+     * Actualiza el costo sugerido en base al producto seleccionado y su historial
+     * de compras con el proveedor o fabricante seleccionado, realizando la
+     * conversión de moneda si es necesario
      */
     private void actualizarCostoSugerido() {
         Producto p = cmbProducto.getValue();
         if (p == null) {
             lblMonedaSugerida.setText("");
+            lblOrigenCosto.setText("");
             return;
         }
 
@@ -331,6 +404,7 @@ public class CompraView {
             Double costoHistorico = compraService.obtenerCostoCompra(p, prov, fab);
             String monedaHistorica = compraService.obtenerMonedaCompra(p, prov, fab);
             String monedaCompraSeleccionada = cmbMonedaCompra.getValue();
+            boolean tieneCostoEspecifico = compraService.tieneCostoEspecifico(p, prov, fab);
 
             if (costoHistorico > 0) {
                 if (monedaHistorica.equalsIgnoreCase(monedaCompraSeleccionada)) {
@@ -338,23 +412,41 @@ public class CompraView {
                     lblMonedaSugerida.setText(idioma.get("purchase.lbl.base", monedaHistorica));
                 } else {
                     double tc = monedaService.getTipoCambioActual();
-                    if (tc == 0) tc = 20.0;
-                    double valorConvertido = monedaCompraSeleccionada.equals("MXN") 
-                        ? (costoHistorico * tc) 
-                        : (costoHistorico / tc);
-                    
+                    if (tc == 0)
+                        tc = 20.0;
+                    double valorConvertido = monedaCompraSeleccionada.equals("MXN")
+                            ? (costoHistorico * tc)
+                            : (costoHistorico / tc);
+
                     txtCostou.setText(String.format("%.2f", valorConvertido).replace(",", "."));
                     lblMonedaSugerida.setText(idioma.get("purchase.lbl.autoconv", monedaHistorica));
+                }
+
+                if (tieneCostoEspecifico) {
+                    String origen = rbProveedor.isSelected() ? "proveedor" : "fabricante";
+                    lblOrigenCosto.setText("★ " + idioma.get("purchase.lbl.cost_origin.specific",
+                            "Costo específico de " + origen + " aplicado"));
+                    lblOrigenCosto.setStyle(
+                            "-fx-font-size: 11px; -fx-font-style: italic; -fx-text-fill: #16A34A; -fx-font-weight: bold;");
+                } else {
+                    lblOrigenCosto
+                            .setText(idioma.get("purchase.lbl.cost_origin.none", "Sin costo específico registrado"));
+                    lblOrigenCosto.setStyle("-fx-font-size: 11px; -fx-font-style: italic; -fx-text-fill: #6B7280;");
                 }
             } else {
                 txtCostou.setText("0.00");
                 lblMonedaSugerida.setText("");
+                lblOrigenCosto.setText("");
             }
+        } else {
+            lblOrigenCosto.setText("");
         }
     }
 
     /**
-     * Carga los catálogos de productos, proveedores y fabricantes desde la base de datos para poblar los ComboBox correspondientes, permitiendo al usuario seleccionar el origen y los productos a comprar
+     * Carga los catálogos de productos, proveedores y fabricantes desde la base de
+     * datos para poblar los ComboBox correspondientes, permitiendo al usuario
+     * seleccionar el origen y los productos a comprar
      */
     private void cargarCatalogos() {
         cmbProducto.getItems().setAll(productoService.consultarProductos());
@@ -363,21 +455,28 @@ public class CompraView {
     }
 
     /**
-     * Agrega un producto a la lista de detalles de la compra, validando que se haya seleccionado un origen (proveedor o fabricante) y un producto, y que los campos de cantidad y costo sean numéricos y positivos. Si el producto ya existe en la lista, actualiza su cantidad y subtotal en lugar de agregar una nueva entrada.
+     * Agrega un producto a la lista de detalles de la compra, validando que se haya
+     * seleccionado un origen (proveedor o fabricante) y un producto, y que los
+     * campos de cantidad y costo sean numéricos y positivos. Si el producto ya
+     * existe en la lista, actualiza su cantidad y subtotal en lugar de agregar una
+     * nueva entrada.
      */
     private void agregarProducto() {
         if (rbProveedor.isSelected() && cmbProveedor.getValue() == null) {
-            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.origin.title"), idioma.get("purchase.msg.origin.supplier"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.origin.title"),
+                    idioma.get("purchase.msg.origin.supplier"), stage);
             return;
         }
         if (rbFabricante.isSelected() && cmbFabricante.getValue() == null) {
-            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.origin.title"), idioma.get("purchase.msg.origin.manufacturer"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.origin.title"),
+                    idioma.get("purchase.msg.origin.manufacturer"), stage);
             return;
         }
 
         Producto p = cmbProducto.getValue();
         if (p == null) {
-            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.validation.title"), idioma.get("purchase.msg.validation.product"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.validation.title"),
+                    idioma.get("purchase.msg.validation.product"), stage);
             return;
         }
 
@@ -412,28 +511,50 @@ public class CompraView {
             cmbProducto.requestFocus();
 
         } catch (NumberFormatException e) {
-            dialogService.mostrarAlerta(Alert.AlertType.ERROR, idioma.get("purchase.msg.numeric.title"), idioma.get("purchase.msg.numeric.content"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.ERROR, idioma.get("purchase.msg.numeric.title"),
+                    idioma.get("purchase.msg.numeric.content"), stage);
         }
     }
 
     /**
-     * Calcula el total general de la compra sumando los subtotales de cada detalle, y actualiza la etiqueta del total. Si la moneda de la compra es diferente a la moneda por defecto, también calcula y muestra el equivalente en la moneda por defecto utilizando el tipo de cambio actual.
+     * Calcula el total general de la compra sumando los subtotales de cada detalle,
+     * y actualiza la etiqueta del total. Si la moneda de la compra es diferente a
+     * la moneda por defecto, también calcula y muestra el equivalente en la moneda
+     * por defecto utilizando el tipo de cambio actual.
      */
     private void calcularTotalGeneral() {
-        double total = listaDetalles.stream().mapToDouble(DetalleCompra::getSubtotal).sum();
+        double subtotal = 0.0;
+        double iva = 0.0;
+        double total = 0.0;
+        
+        for (DetalleCompra d : listaDetalles) {
+            double lineTotal = d.getSubtotal();
+            total += lineTotal;
+            if (d.getProducto() != null && Boolean.TRUE.equals(d.getProducto().getAplicaIva())) {
+                double lineSubtotal = lineTotal / impuestoService.getFactorIva();
+                subtotal += lineSubtotal;
+                iva += (lineTotal - lineSubtotal);
+            } else {
+                subtotal += lineTotal;
+            }
+        }
+
+        lblSubtotalValor.setText(idioma.get("sale.lbl.subtotal") + String.format(" $%.2f", subtotal));
+        lblImpuestosValor.setText(idioma.get("sale.lbl.tax") + String.format(" $%.2f", iva));
         lblTotal.setText(idioma.get("purchase.lbl.total") + String.format(" $%.2f", total));
 
         String monedaSel = cmbMonedaCompra.getValue();
         String monedaPref = monedaService.getMonedaPorDefecto();
         double tc = monedaService.getTipoCambioActual();
-        if (tc == 0) tc = 20.0;
+        if (tc == 0)
+            tc = 20.0;
 
         if (monedaSel != null && monedaSel.equalsIgnoreCase(monedaPref)) {
-            lblTotalEquivalente.setText(""); 
+            lblTotalEquivalente.setText("");
         } else {
             double equivalente;
             if (monedaPref.equalsIgnoreCase("MXN")) {
-                equivalente = total * tc; 
+                equivalente = total * tc;
             } else {
                 equivalente = total / tc;
             }
@@ -442,18 +563,26 @@ public class CompraView {
     }
 
     /**
-     * Procesa la compra al hacer clic en el botón de registrar, validando que haya productos en la lista de detalles, y mostrando una confirmación antes de registrar la compra. Si el usuario confirma, crea un objeto Compra con los detalles ingresados, llama al servicio para registrar la compra en la base de datos, y muestra el resultado de la operación. Si la compra se registra exitosamente, limpia la lista de detalles y recarga los catálogos para permitir registrar una nueva compra
+     * Procesa la compra al hacer clic en el botón de registrar, validando que haya
+     * productos en la lista de detalles, y mostrando una confirmación antes de
+     * registrar la compra. Si el usuario confirma, crea un objeto Compra con los
+     * detalles ingresados, llama al servicio para registrar la compra en la base de
+     * datos, y muestra el resultado de la operación. Si la compra se registra
+     * exitosamente, limpia la lista de detalles y recarga los catálogos para
+     * permitir registrar una nueva compra
      */
     private void procesarCompra() {
         if (listaDetalles.isEmpty()) {
-            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.empty.title"), idioma.get("purchase.msg.empty.content"), stage);
+            dialogService.mostrarAlerta(Alert.AlertType.WARNING, idioma.get("purchase.msg.empty.title"),
+                    idioma.get("purchase.msg.empty.content"), stage);
             return;
         }
 
         Proveedor prov = cmbProveedor.getValue();
         Fabricante fab = cmbFabricante.getValue();
 
-        if (dialogService.mostrarConfirmacion(idioma.get("purchase.msg.confirm.title"), idioma.get("purchase.msg.confirm.content"), stage)) {
+        if (dialogService.mostrarConfirmacion(idioma.get("purchase.msg.confirm.title"),
+                idioma.get("purchase.msg.confirm.content"), stage)) {
             Compra compra = new Compra();
             compra.setTotalCompra(listaDetalles.stream().mapToDouble(DetalleCompra::getSubtotal).sum());
 
@@ -467,9 +596,11 @@ public class CompraView {
             compra.setTipoCambio(monedaService.getTipoCambioActual());
 
             String resultado = compraService.registrarCompra(compra, new ArrayList<>(listaDetalles), usuarioActual);
-            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, idioma.get("purchase.msg.result.title"), resultado, stage);
+            dialogService.mostrarAlerta(Alert.AlertType.INFORMATION, idioma.get("purchase.msg.result.title"), resultado,
+                    stage);
 
-            if (resultado.contains("exitosamente") || resultado.contains("guardad") || resultado.contains("successfully") || resultado.contains("saved")) {
+            if (resultado.contains("exitosamente") || resultado.contains("guardad")
+                    || resultado.contains("successfully") || resultado.contains("saved")) {
                 listaDetalles.clear();
                 cargarCatalogos();
             }

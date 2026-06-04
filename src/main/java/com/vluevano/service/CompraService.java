@@ -50,6 +50,26 @@ public class CompraService {
     }
 
     /**
+     * Verifica si existe un costo específico para el producto con el proveedor o fabricante
+     * @param p
+     * @param prov
+     * @param fab
+     * @return
+     */
+    public boolean tieneCostoEspecifico(Producto p, Proveedor prov, Fabricante fab) {
+        if (p == null) return false;
+        if (prov != null) {
+            ProductoProveedor pp = productoProveedorRepository.findCostoEspecifico(p.getIdProducto(), prov.getIdProveedor());
+            if (pp != null && pp.getCosto() != null) return true;
+        }
+        if (fab != null) {
+            ProductoFabricante pf = productoFabricanteRepository.findCostoEspecifico(p.getIdProducto(), fab.getIdFabricante());
+            if (pf != null && pf.getCosto() != null) return true;
+        }
+        return false;
+    }
+
+    /**
      * Obtiene la moneda de compra considerando el producto, proveedor y fabricante
      * @param p
      * @param prov

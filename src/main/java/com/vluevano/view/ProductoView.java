@@ -15,6 +15,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,9 +39,13 @@ public class ProductoView extends BaseDirectorioView<Producto> {
     @Autowired
     private MonedaService monedaService;
 
-    private TextField txtNombre, txtFicha, txtAlterno, txtExistencia, txtPrecio;
+    @Autowired
+    private com.vluevano.service.ImpuestoService impuestoService;
+
+    private TextField txtNombre, txtFicha, txtAlterno, txtExistencia, txtPrecio, txtStockMinimo;
     private ComboBox<String> cmbMoneda;
-    private Label lblConversion;
+    private Label lblConversion, lblTituloPrecio, lblDesgloseIva;
+    private CheckBox chkAplicaIva;
 
     private BorderPane contentPanel;
     private Map<String, Button> navButtons = new HashMap<>();
@@ -147,8 +153,30 @@ public class ProductoView extends BaseDirectorioView<Producto> {
             return cats.isEmpty() ? "---" : cats;
         }, 120);
 
-        TableColumn<Producto, String> colExistencia = UIFactory.crearColumna(idioma.get("product.col.stock"),
-                d -> String.valueOf(d.getExistenciaProducto()), 60);
+        TableColumn<Producto, Producto> colExistencia = new TableColumn<>(idioma.get("product.col.stock"));
+        colExistencia.setCellValueFactory(param -> new javafx.beans.property.SimpleObjectProperty<>(param.getValue()));
+        colExistencia.setCellFactory(param -> new TableCell<>() {
+            @Override
+            protected void updateItem(Producto item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    HBox box = new HBox(5);
+                    box.setAlignment(Pos.CENTER);
+                    Label lblVal = new Label(String.valueOf(item.getExistenciaProducto()));
+                    if (item.getStockMinimo() != null && item.getExistenciaProducto() <= item.getStockMinimo()) {
+                        Circle dot = new Circle(4, Color.web("#DC2626"));
+                        box.getChildren().addAll(dot, lblVal);
+                    } else {
+                        box.getChildren().add(lblVal);
+                    }
+                    setGraphic(box);
+                    setText(null);
+                }
+            }
+        });
         colExistencia.setMaxWidth(80);
         colExistencia.setStyle("-fx-alignment: CENTER;");
 
@@ -173,7 +201,11 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         });
 
         tablaDatos.getColumns()
-                .addAll(List.of(colId, colNombre, colAlterno, colPrecio, colCategoria, colExistencia, colAcciones));
+                .addAll(List.of(colId, colNombre, colAlterno, colPrecio, colCategoria, colExistencia));
+
+        if (usuarioService.tienePermiso(usuarioActual)) {
+            tablaDatos.getColumns().add(colAcciones);
+        }
     }
 
     /**
@@ -256,7 +288,7 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         contentPanel.setCenter(vistaGeneral);
         actualizarEstiloBotones("TAB_GENERAL");
 
-        VBox root = new VBox(5, scrollNav, contentPanel); // Menos espacio aquí porque el Scroll ya tiene MinHeight
+        VBox root = new VBox(5, scrollNav, contentPanel);
         root.setPadding(new Insets(0, 20, 20, 20));
         return root;
     }
@@ -271,9 +303,11 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         txtFicha.clear();
         txtAlterno.clear();
         txtExistencia.setText("0");
+        txtStockMinimo.setText("5");
         txtPrecio.setText("0.00");
         cmbMoneda.setValue(monedaService.getMonedaPorDefecto());
         lblConversion.setText("");
+        chkAplicaIva.setSelected(true);
 
         categoriasSeleccionadas.clear();
         proveedoresAgregados.clear();
@@ -316,6 +350,7 @@ public class ProductoView extends BaseDirectorioView<Producto> {
 
         try {
             p.setExistenciaProducto(Integer.parseInt(txtExistencia.getText().trim()));
+            p.setStockMinimo(Integer.parseInt(txtStockMinimo.getText().trim()));
             p.setPrecioProducto(Double.parseDouble(txtPrecio.getText().trim()));
         } catch (NumberFormatException e) {
             dialogService.mostrarAlerta(Alert.AlertType.ERROR, idioma.get("product.msg.error.title"),
@@ -324,6 +359,7 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         }
 
         p.setMonedaProducto(cmbMoneda.getValue());
+        p.setAplicaIva(chkAplicaIva.isSelected());
         p.setCategorias(new ArrayList<>(categoriasSeleccionadas));
 
         p.getProductoProveedores().clear();
@@ -376,11 +412,13 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         txtFicha.setText(pFull.getFichaProducto());
         txtAlterno.setText(pFull.getAlternoProducto());
         txtExistencia.setText(String.valueOf(pFull.getExistenciaProducto()));
+        txtStockMinimo.setText(String.valueOf(pFull.getStockMinimo() != null ? pFull.getStockMinimo() : 5));
         txtPrecio.setText(String.valueOf(pFull.getPrecioProducto() != null ? pFull.getPrecioProducto() : "0.00"));
 
         String monedaGuardada = pFull.getMonedaProducto() != null ? pFull.getMonedaProducto()
                 : monedaService.getMonedaPorDefecto();
         cmbMoneda.setValue(monedaGuardada);
+        chkAplicaIva.setSelected(pFull.getAplicaIva() != null ? pFull.getAplicaIva() : true);
 
         categoriasSeleccionadas.setAll(pFull.getCategorias());
         proveedoresAgregados.setAll(pFull.getProductoProveedores());
@@ -533,6 +571,7 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         txtFicha = UIFactory.crearInput(idioma.get("product.placeholder.desc"));
         txtAlterno = UIFactory.crearInput(idioma.get("product.placeholder.altern"));
         txtExistencia = UIFactory.crearInput("0");
+        txtStockMinimo = UIFactory.crearInput("5");
         txtPrecio = UIFactory.crearInput("0.00");
 
         cmbMoneda = new ComboBox<>(FXCollections.observableArrayList("MXN", "USD"));
@@ -540,17 +579,33 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         cmbMoneda.setPrefWidth(120);
         cmbMoneda.setStyle(AppTheme.STYLE_INPUT);
 
+        chkAplicaIva = new CheckBox(String.format(idioma.get("product.lbl.aplica_iva"), impuestoService.getIvaPorcentaje()));
+        chkAplicaIva.setSelected(false);
+        chkAplicaIva.setStyle("-fx-text-fill: #4B5563; -fx-font-size: 13px;");
+
         lblConversion = new Label("");
         lblConversion.setStyle("-fx-text-fill: #F97316; -fx-font-size: 13px; -fx-font-weight: bold;");
         lblConversion.setPadding(new Insets(2, 0, 0, 0));
 
-        Runnable actualizarCalculo = () -> calcularEquivalenciaGeneral(txtPrecio, cmbMoneda, lblConversion);
+        lblTituloPrecio = new Label(idioma.get("product.lbl.base_price"));
+        lblTituloPrecio.setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;");
+
+        lblDesgloseIva = new Label("");
+        lblDesgloseIva.setStyle("-fx-text-fill: #6B7280; -fx-font-size: 12px;");
+
+        Runnable actualizarCalculo = () -> {
+            calcularEquivalenciaGeneral(txtPrecio, cmbMoneda, lblConversion);
+            actualizarDesgloseIva();
+        };
+
         txtPrecio.textProperty().addListener((o, v, n) -> actualizarCalculo.run());
         cmbMoneda.setOnAction(e -> actualizarCalculo.run());
+        chkAplicaIva.setOnAction(e -> actualizarCalculo.run());
 
         UnaryOperator<TextFormatter.Change> filterInt = change -> change.getControlNewText().matches("\\d*") ? change
                 : null;
         txtExistencia.setTextFormatter(new TextFormatter<>(filterInt));
+        txtStockMinimo.setTextFormatter(new TextFormatter<>(filterInt));
 
         UnaryOperator<TextFormatter.Change> filterDouble = change -> change.getControlNewText()
                 .matches("\\d*|\\d+\\.\\d*") ? change : null;
@@ -598,6 +653,24 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         }
     }
 
+    private void actualizarDesgloseIva() {
+        boolean aplica = chkAplicaIva.isSelected();
+        lblTituloPrecio
+                .setText(aplica ? idioma.get("product.lbl.total_price_iva") : idioma.get("product.lbl.base_price"));
+        try {
+            double val = Double.parseDouble(txtPrecio.getText().trim());
+            if (aplica) {
+                double sub = val / impuestoService.getFactorIva();
+                double iva = val - sub;
+                lblDesgloseIva.setText(String.format(idioma.get("global.breakdown_iva"), sub, iva, val));
+            } else {
+                lblDesgloseIva.setText(String.format(idioma.get("global.breakdown_no_iva"), val));
+            }
+        } catch (Exception ex) {
+            lblDesgloseIva.setText("");
+        }
+    }
+
     /**
      * Formatea el precio de manera inteligente para mostrar tanto el valor original
      * con su moneda como una equivalencia aproximada en la moneda preferida del
@@ -641,19 +714,27 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         HBox precioContainer = new HBox(5, txtPrecio, cmbMoneda);
         HBox.setHgrow(txtPrecio, Priority.ALWAYS);
 
-        VBox grupoPrecio = new VBox(5, new Label(idioma.get("product.lbl.base_price")), precioContainer, lblConversion);
-        grupoPrecio.getChildren().get(0)
-                .setStyle("-fx-font-weight: bold; -fx-text-fill: #374151; -fx-font-size: 13px;");
+        VBox grupoPrecio = new VBox(12);
+        grupoPrecio.setStyle(
+                "-fx-background-color: #F9FAFB; -fx-padding: 15; -fx-background-radius: 6; -fx-border-color: #E5E7EB; -fx-border-radius: 6;");
+
+        Label seccionTitulo = new Label(idioma.get("product.section.price", "Precio e Impuestos"));
+        seccionTitulo.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #111827;");
+
+        VBox inputsPrecio = new VBox(5, lblTituloPrecio, precioContainer, lblDesgloseIva, lblConversion);
+
+        grupoPrecio.getChildren().addAll(seccionTitulo, chkAplicaIva, inputsPrecio);
 
         VBox grupoExistencia = UIFactory.crearGrupoInput(idioma.get("product.lbl.stock"), txtExistencia);
-        grupoExistencia.setMaxWidth(260);
+        VBox grupoMinStock = UIFactory.crearGrupoInput(idioma.get("product.lbl.min_stock"), txtStockMinimo);
+        HBox rowExistencia = new HBox(15, grupoExistencia, grupoMinStock);
 
         return new VBox(15,
                 UIFactory.crearGrupoInput(idioma.get("product.lbl.name"), txtNombre),
                 UIFactory.crearGrupoInput(idioma.get("product.lbl.desc"), txtFicha),
                 UIFactory.crearGrupoInput(idioma.get("product.lbl.altern"), txtAlterno),
                 grupoPrecio,
-                grupoExistencia,
+                rowExistencia,
                 crearSelectorCategorias());
     }
 
@@ -790,10 +871,16 @@ public class ProductoView extends BaseDirectorioView<Producto> {
                 (p.getAlternoProducto() != null && !p.getAlternoProducto().isEmpty()) ? p.getAlternoProducto() : "---");
 
         Label lblExistenciaVal = new Label(String.valueOf(p.getExistenciaProducto()));
+        Integer minStock = p.getStockMinimo() != null ? p.getStockMinimo() : 0;
         lblExistenciaVal.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: "
-                + (p.getExistenciaProducto() > 0 ? "#059669" : "#DC2626") + ";");
+                + (p.getExistenciaProducto() > minStock ? "#059669" : "#DC2626") + ";");
         VBox vExistencia = new VBox(2, new Label(idioma.get("product.detail.stock")), lblExistenciaVal);
         vExistencia.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
+
+        Label lblMinStockVal = new Label(String.valueOf(minStock));
+        lblMinStockVal.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #374151;");
+        VBox vMinStock = new VBox(2, new Label(idioma.get("product.lbl.min_stock")), lblMinStockVal);
+        vMinStock.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #374151;");
 
         Label lblPrecioVal = new Label(formatearPrecioInteligente(p.getPrecioProducto(), p.getMonedaProducto()));
         lblPrecioVal.setStyle("-fx-font-weight: bold; -fx-font-size: 15px; -fx-text-fill: #2563EB;");
@@ -804,10 +891,33 @@ public class ProductoView extends BaseDirectorioView<Producto> {
         VBox vCategorias = UIFactory.crearDatoDetalle(idioma.get("product.detail.categories"),
                 catStr.isEmpty() ? idioma.get("product.detail.no_category") : catStr);
 
+        boolean aplica = p.getAplicaIva() != null && p.getAplicaIva();
+        double precioVal = p.getPrecioProducto() != null ? p.getPrecioProducto() : 0.0;
+        double base = aplica ? precioVal / impuestoService.getFactorIva() : precioVal;
+        double iva = aplica ? precioVal - base : 0.0;
+
+        Label lblBase = new Label(formatearPrecioInteligente(base, p.getMonedaProducto()));
+        lblBase.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #374151;");
+        VBox vBase = new VBox(2, new Label(idioma.get("product.lbl.base_price")), lblBase);
+        vBase.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #6B7280;");
+
+        Label lblIva = new Label(formatearPrecioInteligente(iva, p.getMonedaProducto()));
+        lblIva.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #374151;");
+        VBox vIva = new VBox(2, new Label(idioma.get("global.iva")), lblIva);
+        vIva.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #6B7280;");
+
+        Label lblTotal = new Label(formatearPrecioInteligente(precioVal, p.getMonedaProducto()));
+        lblTotal.setStyle("-fx-font-weight: bold; -fx-font-size: 15px; -fx-text-fill: #2563EB;");
+        VBox vTotal = new VBox(2, new Label(idioma.get("product.lbl.total_price")), lblTotal);
+        vTotal.getChildren().get(0).setStyle("-fx-font-weight: bold; -fx-text-fill: #6B7280;");
+
         grid.add(vAlterno, 0, 0);
         grid.add(vExistencia, 1, 0);
-        grid.add(vPrecio, 2, 0);
-        grid.add(vCategorias, 3, 0);
+        grid.add(vMinStock, 2, 0);
+        grid.add(vBase, 3, 0);
+        grid.add(vIva, 4, 0);
+        grid.add(vTotal, 5, 0);
+        grid.add(vCategorias, 6, 0);
         return grid;
     }
 
